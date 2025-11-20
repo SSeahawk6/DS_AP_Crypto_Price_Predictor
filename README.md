@@ -30,3 +30,22 @@ This project solves that problem by implementing a **Machine Learning approach**
 * **matplotlib** (Visualization)
 * **requests** (API Data Collection)
 
+---
+
+# 📂 Project Structure
+
+The project is organized as a modular Python application:
+
+```text
+crypto-ml-project/
+├── data/                   # Stores downloaded CSVs (to avoid re-fetching)
+├── src/
+│   ├── __init__.py
+│   ├── api_collector.py    # Handles API requests and rate limits
+│   ├── feature_engineer.py # Calculates technical indicators (RSI, MACD, etc.)
+│   ├── ml_model.py         # Trains the Random Forest and generates predictions
+│   └── backtester.py       # Simulates trading and calculates P&L
+├── tests/                  # Unit and integration tests (pytest)
+├── main.py                 # CLI entry point
+├── requirements.txt        # Python dependencies
+└── README.md               # Project documentation
