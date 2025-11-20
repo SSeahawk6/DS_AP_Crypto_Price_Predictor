@@ -14,3 +14,19 @@ An end-to-end Machine Learning pipeline that predicts future cryptocurrency pric
 - [Usage](#usage)
 - [Roadmap](#roadmap)
 - [Contact](#contact)
+
+---
+
+## 🤖 About the Project
+
+Cryptocurrency markets are highly volatile, and traditional algorithmic trading strategies often rely on rigid, pre-defined rules (e.g., "Buy if RSI < 30"). These static strategies fail to adapt to changing market conditions.
+
+This project solves that problem by implementing a **Machine Learning approach**. It fetches real-world historical data, engineers complex technical features (RSI, Bollinger Bands, MACD), and trains a `scikit-learn` Random Forest model to predict price direction. The model's performance is then rigorously evaluated against a "Buy & Hold" strategy using a custom backtesting engine.
+
+### Built With
+* **Python 3.10+**
+* **scikit-learn** (Machine Learning)
+* **pandas & NumPy** (Data Processing)
+* **matplotlib** (Visualization)
+* **requests** (API Data Collection)
+
