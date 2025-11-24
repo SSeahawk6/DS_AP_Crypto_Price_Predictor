@@ -30,6 +30,14 @@ This project solves that problem by implementing a **Machine Learning approach**
 * **matplotlib** (Visualization)
 * **requests** (API Data Collection)
 
+## ✨ Key Features
+
+* **Real-World Data Ingestion**: Automatically fetches historical price data (OHLC) from the **CoinGecko API**.
+* **Advanced Feature Engineering**: Calculates technical indicators like RSI, Moving Averages, and Bollinger Bands to create a feature matrix for the model.
+* **Predictive Modeling**: Trains a **Random Forest Classifier** to predict if the price will be higher in $N$ hours.
+* **Strict Evaluation**: Uses a time-series split (Train on Past, Test on Future) to prevent "look-ahead bias."
+* **Backtesting Engine**: Simulates trading based on the model's predictions and calculates Profit & Loss (P&L) compared to a baseline.
+
 ---
 
 # 📂 Project Structure
