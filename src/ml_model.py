@@ -1,4 +1,7 @@
-from sklearn.model_selection import GridSearchCV  # <--- New Import
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import accuracy_score
 
 def train_model(df):
     """
@@ -12,26 +15,25 @@ def train_model(df):
     
     # 2. Time-Based Split (80/20)
     split_point = int(len(df) * 0.8)
+    
     X_train = X.iloc[:split_point]
     X_test = X.iloc[split_point:]
+    
     y_train = y.iloc[:split_point]
     y_test = y.iloc[split_point:]
     
     print(f"[INFO] Training on {len(X_train)} rows...")
     
-    # 3. Hyperparameter Tuning (The new "Student" part)
-    # We define a simple grid of parameters to try
+    # 3. Hyperparameter Tuning (Lecture 12b)
     param_grid = {
-        'n_estimators': [50, 100, 200],  # Try different number of trees
-        'max_depth': [None, 10, 20]      # Try different depths
+        'n_estimators': [50, 100, 200],
+        'max_depth': [None, 10, 20]
     }
     
-    # Use GridSearchCV to find the best combination
     rf = RandomForestClassifier(random_state=42)
     grid_search = GridSearchCV(rf, param_grid, cv=3, scoring='accuracy')
     grid_search.fit(X_train, y_train)
     
-    # Select the best model
     best_model = grid_search.best_estimator_
     print(f"[INFO] Best Parameters found: {grid_search.best_params_}")
     
