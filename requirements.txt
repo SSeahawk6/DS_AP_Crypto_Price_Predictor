@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+matplotlib
+requests
+pytest
+black
+flake8
+tensorflow
