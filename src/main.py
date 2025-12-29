@@ -1,6 +1,8 @@
 import argparse
 import sys
 import os
+import concurrent.futures
+import time
 
 # Ensure we can import from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -10,46 +12,64 @@ from src.feature_engineer import add_technical_indicators
 from src.ml_model import train_model
 from src.backtester import Backtester
 
-def main():
-    parser = argparse.ArgumentParser(description="Crypto Price Predictor ML Pipeline")
-    parser.add_argument("--coin", type=str, default="bitcoin", help="Cryptocurrency ID (e.g., bitcoin)")
-    parser.add_argument("--days", type=int, default=365, help="Number of days of data to fetch")
+def process_coin(coin_id, days):
+    """
+    Worker function to process a single coin.
+    This runs inside a separate process/thread.
+    """
+    print(f"[{coin_id.upper()}] Starting analysis...")
     
-    args = parser.parse_args()
-    
-    print(f"--- Starting Analysis for {args.coin.upper()} ---")
-    
-    # Data Collection
-    csv_path = fetch_crypto_data(args.coin, args.days)
+    # 1. Fetch Data
+    csv_path = fetch_crypto_data(coin_id, days)
     if not csv_path:
-        print("Exiting due to data fetching error.")
-        return
+        return f"[{coin_id.upper()}] Failed to fetch data."
 
-    # Load and Engineer Features
+    # 2. Engineer Features
     import pandas as pd
     df = pd.read_csv(csv_path, parse_dates=True, index_col='timestamp')
-    
-    print("[INFO] Engineering technical features...")
     df_features = add_technical_indicators(df)
     
-    # Train Model
-    print("[INFO] Training Random Forest Model...")
+    # 3. Train Model
     model, X_test, y_test, predictions = train_model(df_features)
     
-    # Run Backtest
-    print("[INFO] Running Backtest Simulation...")
+    # 4. Backtest
     test_prices = df_features.loc[X_test.index, 'price']
-    
     backtester = Backtester(initial_balance=10000)
     final_balance = backtester.run(test_prices, predictions)
     
-    # Report Results
+    # 5. Save Results
     return_pct = ((final_balance - 10000) / 10000) * 100
-    print("-" * 30)
-    print(f"FINAL RESULT: ${final_balance:.2f} ({return_pct:+.2f}%)")
-    print("-" * 30)
     
+    # Save Plot
     backtester.plot_results(test_prices)
+    # Rename plot to avoid overwriting
+    os.rename('results/backtest_chart.png', f'results/chart_{coin_id}.png')
+    
+    return f"[{coin_id.upper()}] Finished. Balance: ${final_balance:.2f} ({return_pct:+.2f}%)"
+
+def main():
+    parser = argparse.ArgumentParser(description="Parallel Crypto Price Predictor")
+    parser.add_argument("--coins", nargs="+", default=["bitcoin", "ethereum", "solana"], help="List of coins to analyze")
+    parser.add_argument("--days", type=int, default=365, help="Days of data to fetch")
+    
+    args = parser.parse_args()
+    
+    os.makedirs("results", exist_ok=True)
+    
+    start_time = time.time()
+    print(f"--- Starting Parallel Analysis for: {args.coins} ---")
+    
+    # Use ProcessPoolExecutor for Parallel Execution (Lecture 13)
+    # We use 'max_workers=3' to run 3 analyses at the same time
+    with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
+        # Submit all tasks
+        futures = [executor.submit(process_coin, coin, args.days) for coin in args.coins]
+        
+        # Wait for results
+        for future in concurrent.futures.as_completed(futures):
+            print(future.result())
+            
+    print(f"--- Total Time: {time.time() - start_time:.2f} seconds ---")
 
 if __name__ == "__main__":
     main()
