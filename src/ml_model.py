@@ -9,9 +9,9 @@ def train_model(df):
     Matches Lecture 12b: Hyperparameter Tuning.
     """
     # 1. Define Features
-    features = ['sma_20', 'bb_upper', 'bb_lower', 'rsi']
+    features = ['sma_20', 'bb_upper', 'bb_lower', 'rsi', 'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_7']
+    
     X = df[features]
-    y = df['target']
     
     # 2. Time-Based Split (80/20)
     split_point = int(len(df) * 0.8)

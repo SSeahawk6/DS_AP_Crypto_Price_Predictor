@@ -2,40 +2,41 @@ import pandas as pd
 import numpy as np
 
 def calculate_rsi(data: pd.DataFrame, window: int = 14) -> pd.Series:
-    """
-    Calculates the Relative Strength Index (RSI).
-    """
+    """Calculates Relative Strength Index (RSI)."""
     delta = data['price'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-
     rs = gain / loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
+    return 100 - (100 / (1 + rs))
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Adds Technical Indicators (RSI, SMA, Bollinger Bands) to the DataFrame.
+    Adds technical indicators, Lag Features (Memory), and a threshold-based Target.
     """
     df = df.copy()
     
-    # 1. Simple Moving Average (20 days)
+    # --- 1. Basic Indicators ---
     df['sma_20'] = df['price'].rolling(window=20).mean()
-    
-    # 2. Bollinger Bands (20 days, 2 std dev)
-    rolling_std = df['price'].rolling(window=20).std()
-    df['bb_upper'] = df['sma_20'] + (rolling_std * 2)
-    df['bb_lower'] = df['sma_20'] - (rolling_std * 2)
-    
-    # 3. Relative Strength Index (RSI)
+    df['std_20'] = df['price'].rolling(window=20).std()
+    df['bb_upper'] = df['sma_20'] + (df['std_20'] * 2)
+    df['bb_lower'] = df['sma_20'] - (df['std_20'] * 2)
     df['rsi'] = calculate_rsi(df)
     
-    # 4. Target Variable: Will the price be higher tomorrow? (1 = Yes, 0 = No)
-    # We shift(-1) to compare 'today's price' with 'tomorrow's price'
-    df['target'] = (df['price'].shift(-1) > df['price']).astype(int)
+    # --- 2. Advanced: Lag Features (Memory) ---
+    # This gives the model context: "What happened yesterday?"
+    # We use pct_change() so the model sees returns (%), not raw price ($)
+    for lag in [1, 2, 3, 7]:
+        df[f'return_lag_{lag}'] = df['price'].pct_change().shift(lag)
     
-    # Drop rows with NaN values created by rolling windows
+    # --- 3. The TA's Requirement: Threshold Target ---
+    # We calculate the NEXT day's return
+    df['next_day_return'] = df['price'].pct_change().shift(-1)
+    
+    # STRICT RULE: Label 1 if return > 0.5% (0.005), else 0
+    # This matches the TA's explicit example in the screenshot.
+    df['target'] = (df['next_day_return'] > 0.005).astype(int)
+    
+    # Drop NaNs created by rolling windows and lags
     df.dropna(inplace=True)
     
     return df
-    
