@@ -15,7 +15,6 @@ from src.backtester import Backtester
 def process_coin(coin_id, days):
     """
     Worker function to process a single coin.
-    This runs inside a separate process/thread.
     """
     print(f"[{coin_id.upper()}] Starting analysis...")
     
@@ -37,14 +36,22 @@ def process_coin(coin_id, days):
     backtester = Backtester(initial_balance=10000)
     final_balance = backtester.run(test_prices, predictions)
     
-    # 5. Save Results
-    return_pct = ((final_balance - 10000) / 10000) * 100
+    # 5. Save Results & Metrics
+    metrics = backtester.calculate_metrics()
     
-    # Save Plot directly to unique file (Fixes Race Condition)
+    # Save Plot
     chart_filename = f"results/chart_{coin_id}.png"
     backtester.plot_results(test_prices, filename=chart_filename)
     
-    return f"[{coin_id.upper()}] Finished. Balance: ${final_balance:.2f} ({return_pct:+.2f}%)"
+    # Format the success message with the new metrics
+    result_msg = (
+        f"[{coin_id.upper()}] Finished.\n"
+        f"   Balance: ${final_balance:.2f}\n"
+        f"   Return: {metrics['Total Return']}\n"
+        f"   Sharpe Ratio: {metrics['Sharpe Ratio']}\n"
+        f"   Max Drawdown: {metrics['Max Drawdown']}"
+    )
+    return result_msg
 
 def main():
     parser = argparse.ArgumentParser(description="Parallel Crypto Price Predictor")
@@ -58,14 +65,12 @@ def main():
     start_time = time.time()
     print(f"--- Starting Parallel Analysis for: {args.coins} ---")
     
-    # Use ProcessPoolExecutor for Parallel Execution
     with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
-        # Submit all tasks
         futures = [executor.submit(process_coin, coin, args.days) for coin in args.coins]
         
-        # Wait for results
         for future in concurrent.futures.as_completed(futures):
             print(future.result())
+            print("-" * 30)
             
     print(f"--- Total Time: {time.time() - start_time:.2f} seconds ---")
 
