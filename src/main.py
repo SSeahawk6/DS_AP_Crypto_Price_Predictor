@@ -40,10 +40,9 @@ def process_coin(coin_id, days):
     # 5. Save Results
     return_pct = ((final_balance - 10000) / 10000) * 100
     
-    # Save Plot
-    backtester.plot_results(test_prices)
-    # Rename plot to avoid overwriting
-    os.rename('results/backtest_chart.png', f'results/chart_{coin_id}.png')
+    # Save Plot directly to unique file (Fixes Race Condition)
+    chart_filename = f"results/chart_{coin_id}.png"
+    backtester.plot_results(test_prices, filename=chart_filename)
     
     return f"[{coin_id.upper()}] Finished. Balance: ${final_balance:.2f} ({return_pct:+.2f}%)"
 
@@ -59,8 +58,7 @@ def main():
     start_time = time.time()
     print(f"--- Starting Parallel Analysis for: {args.coins} ---")
     
-    # Use ProcessPoolExecutor for Parallel Execution (Lecture 13)
-    # We use 'max_workers=3' to run 3 analyses at the same time
+    # Use ProcessPoolExecutor for Parallel Execution
     with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
         # Submit all tasks
         futures = [executor.submit(process_coin, coin, args.days) for coin in args.coins]
