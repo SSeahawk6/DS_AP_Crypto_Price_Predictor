@@ -4,6 +4,9 @@ scikit-learn
 matplotlib
 requests
 pytest
+pytest-cov    
 black
 flake8
 tensorflow
+yfinance
+seaborn       
