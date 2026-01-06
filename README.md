@@ -9,8 +9,9 @@ An end-to-end Machine Learning pipeline that predicts future cryptocurrency pric
 - [Key Features](#key-features)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
+  - [Prerequisites](#-prerequisites)
+  - [Installation](#-installation)
+  - [Reproducibility](#-reproducibility)
 - [Usage](#usage)
 - [Roadmap](#roadmap)
 - [Contact](#contact)
@@ -47,14 +48,17 @@ The project is organized as a modular Python application:
 
 ```text
 crypto-ml-project/
-├── data/                   # Stores downloaded CSVs (to avoid re-fetching)
+├── data/raw/               # Stores downloaded CSVs (to avoid re-fetching)
+├── notebooks/              # Jupyter notebooks for interactive demos
+├── results/                # Stores generated reports and charts
 ├── src/
 │   ├── __init__.py
-│   ├── api_collector.py    # Handles API requests and rate limits
-│   ├── feature_engineer.py # Calculates technical indicators (RSI, MACD, etc.)
-│   ├── ml_model.py         # Trains the Random Forest and generates predictions
-│   └── backtester.py       # Simulates trading and calculates P&L
+│   ├── data_loader.py      # Handles Yahoo Finance data fetching and caching
+│   ├── feature_engineer.py # Calculates technical indicators (RSI, BB, etc.)
+│   ├── models.py           # Defines Random Forest and Deep Learning models
+│   ├── evaluation.py       # Handles backtesting, financial metrics, and plotting
+│   └── utils.py            # Helper functions for setup and reproducibility
 ├── tests/                  # Unit and integration tests (pytest)
-├── main.py                 # CLI entry point
+├── main.py                 # Main CLI entry point (supports multi-coin loop)
 ├── requirements.txt        # Python dependencies
 └── README.md               # Project documentation
