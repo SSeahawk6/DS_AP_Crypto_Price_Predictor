@@ -5,11 +5,18 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, RandomizedSearchCV
 from sklearn.metrics import accuracy_score
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Input
-from tensorflow.keras.optimizers import Adam
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
+
+try:
+    import tensorflow as tf
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Dropout, Input
+    from tensorflow.keras.optimizers import Adam
+    TF_AVAILABLE = True
+except ImportError:
+    print("[WARN] TensorFlow not found. Deep Learning model will be skipped.")
+    TF_AVAILABLE = False
 
 # -------------------------
 # Random Forest Model
@@ -114,6 +121,11 @@ def train_dl_model(df):
     Trains a Deep Learning model (Neural Network) for price prediction.
     Architecture: Input -> Dense(64) -> Dropout -> Dense(32) -> Output
     """
+    if not TF_AVAILABLE:
+        print("[INFO] Skipping Deep Learning training (TensorFlow missing).")
+        # Return dummy values to prevent unpacking errors in main.py
+        # Expected: model, X_test, y_test, predictions
+        return None, None, None, []
     # 1. Define Features (Must match what we created in feature_engineer.py)
     features = [
         'sma_20', 'bb_upper', 'bb_lower', 'rsi', 

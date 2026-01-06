@@ -57,8 +57,11 @@ def process_coin(coin, days, initial_balance=10000):
     # --- Model B: Deep Learning (Neural Network) ---
     print("\n[MODEL B] Deep Learning Training...")
     # train_dl_model handles scaling internally, passing raw df is safer
-    # We pass the FULL df_features, the function handles the split consistently
-    dl_model, _, _, dl_preds = train_dl_model(df_features)
+    try:
+        dl_model, _, _, dl_preds = train_dl_model(df_features)
+    except Exception as e:
+        print(f"[WARN] DL Model Failed: {e}")
+        dl_preds = []
 
     # ---------------------------------------------------------
     # Backtesting (Using Best Model - let's default to Random Forest for consistency)
