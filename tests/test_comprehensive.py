@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 import os
 import shutil
-from src.optimization import ModelOptimizer
+from src.models import ModelOptimizer
 from src.utils import setup_environment, ensure_directories_exist
-from src.backtester import Backtester
+from src.evaluation import Backtester
 from src.feature_engineer import add_technical_indicators
-from src.visualization import plot_price_history, plot_technical_indicators
+from src.evaluation import plot_price_history, plot_technical_indicators
 
 class TestEndToEnd(unittest.TestCase):
     

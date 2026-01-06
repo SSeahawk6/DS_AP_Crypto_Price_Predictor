@@ -28,11 +28,12 @@ This project solves that problem by implementing a **Machine Learning approach**
 * **scikit-learn** (Machine Learning)
 * **pandas & NumPy** (Data Processing)
 * **matplotlib** (Visualization)
-* **requests** (API Data Collection)
+* **yfinance** (API Data Collection)
 
 ## ✨ Key Features
 
-* **Real-World Data Ingestion**: Automatically fetches historical price data (OHLC) from the **CoinGecko API**.
+* **Real-World Data Ingestion**: Automatically fetches historical price data (OHLC) from **Yahoo Finance**.
+
 * **Advanced Feature Engineering**: Calculates technical indicators like RSI, Moving Averages, and Bollinger Bands to create a feature matrix for the model.
 * **Predictive Modeling**: Trains a **Random Forest Classifier** to predict if the price will be higher in $N$ hours.
 * **Strict Evaluation**: Uses a time-series split (Train on Past, Test on Future) to prevent "look-ahead bias."

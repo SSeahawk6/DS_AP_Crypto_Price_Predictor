@@ -1,8 +1,8 @@
 import unittest
 import pandas as pd
 import numpy as np
-from src.ml_model import train_model
-from src.backtester import Backtester
+from src.models import train_rf_model
+from src.evaluation import Backtester
 
 def test_full_pipeline():
     # 1. Create Dummy Data
@@ -17,7 +17,7 @@ def test_full_pipeline():
     }, index=dates)
     
     # 2. Train Model
-    model, X_test, y_test, preds = train_model(df)
+    model, X_test, y_test, preds = train_rf_model(df)
     
     # 3. Prepare Backtest Data (The Fix)
     # The new Backtester expects a DataFrame with a 'prediction' column

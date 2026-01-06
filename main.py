@@ -1,11 +1,10 @@
 import argparse
 import pandas as pd
-from src.api_collector import fetch_crypto_data
+from src.data_loader import fetch_crypto_data
 from src.feature_engineer import add_technical_indicators
-from src.ml_model import train_model
-from src.optimization import ModelOptimizer  # <--- NEW IMPORT
-from src.backtester import Backtester
-from src.utils import setup_environment     # <--- NEW IMPORT
+from src.models import train_rf_model, ModelOptimizer
+from src.evaluation import Backtester
+from src.utils import setup_environment
 
 def main():
     parser = argparse.ArgumentParser()

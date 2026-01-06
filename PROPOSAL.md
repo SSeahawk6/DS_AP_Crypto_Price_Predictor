@@ -13,7 +13,7 @@ My motivation is to build an end-to-end **Machine Learning pipeline** to predict
 The project is a modular command-line application built with Python 3.10+.
 
 ### Core Technologies
-* **Data Collection:** `requests` to fetch historical OHLC data from the CoinGecko API.
+* **Data Collection:** `yfinance` to fetch historical OHLC data from Yahoo Finance.
 * **Data Processing:** `pandas` and `NumPy` for time-series manipulation.
 * **Machine Learning:** `scikit-learn` to implement the Random Forest Classifier.
 * **Visualization:** `matplotlib` to plot P&L curves and trade signals.

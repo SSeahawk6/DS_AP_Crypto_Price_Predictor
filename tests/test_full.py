@@ -8,8 +8,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.feature_engineer import add_technical_indicators, calculate_rsi
-from src.backtester import Backtester
-from src.ml_model import train_model
+from src.evaluation import Backtester
+from src.models import train_rf_model
 
 class TestProjectLogic(unittest.TestCase):
     def setUp(self):
@@ -54,7 +54,7 @@ class TestProjectLogic(unittest.TestCase):
         train_df = pd.DataFrame(np.random.rand(100, 4), columns=['rsi', 'sma_20', 'bb_upper', 'bb_lower'])
         train_df['target'] = (train_df['rsi'] > 0.5).astype(int)
         
-        model, X_test, y_test, preds = train_model(train_df)
+        model, X_test, y_test, preds = train_rf_model(train_df)
         self.assertIsNotNone(model)
         self.assertEqual(len(y_test), len(preds))
 

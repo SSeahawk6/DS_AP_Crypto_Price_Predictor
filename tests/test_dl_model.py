@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from src.dl_model import train_dl_model
+from src.models import train_dl_model
 import os
 
 # Turn off noisy TensorFlow logs

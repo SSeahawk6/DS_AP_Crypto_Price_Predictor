@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
-from src.backtester import Backtester
+from src.evaluation import Backtester
 
 class TestBacktester:
     
@@ -95,8 +95,8 @@ class TestBacktester:
         # NOTE: This assertion will verify if your src/backtester.py fix is working
         assert metrics['Total Return'] == "20.00%"
 
-    @patch('src.backtester.plt')  # Mock matplotlib
-    @patch('src.backtester.os.makedirs') # Mock creating folders
+    @patch('src.evaluation.plt')  # Mock matplotlib
+    @patch('src.evaluation.os.makedirs') # Mock creating folders
     def test_plot_results(self, mock_makedirs, mock_plt, sample_data):
         """Test that plotting code runs without errors (doesn't actually draw)."""
         bt = Backtester(initial_balance=1000)
