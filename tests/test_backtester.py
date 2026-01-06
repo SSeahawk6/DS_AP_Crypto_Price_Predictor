@@ -100,10 +100,18 @@ class TestBacktester:
     def test_plot_results(self, mock_makedirs, mock_plt, sample_data):
         """Test that plotting code runs without errors (doesn't actually draw)."""
         bt = Backtester(initial_balance=1000)
+        # Configure mock to return (figure, (ax1, ax2, ax3))
+        mock_fig = MagicMock()
+        mock_ax1 = MagicMock()
+        mock_ax2 = MagicMock()
+        mock_ax3 = MagicMock()
+        mock_plt.subplots.return_value = (mock_fig, (mock_ax1, mock_ax2, mock_ax3))
+        
         bt.run(sample_data)
         
         bt.plot_results(sample_data, filename="results/test_chart.png")
         
         # verify the plot function was called
-        mock_plt.figure.assert_called()
-        mock_plt.savefig.assert_called_with("results/test_chart.png")
+        # verify the plot function was called
+        mock_plt.subplots.assert_called()
+        mock_plt.savefig.assert_called_with("results/test_chart.png", dpi=300)

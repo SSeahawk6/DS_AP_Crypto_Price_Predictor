@@ -1,13 +1,20 @@
 import pytest
 import pandas as pd
 import numpy as np
-import tensorflow as tf
-from src.models import train_dl_model
 import os
+from src.models import train_dl_model
+
+# Try to import TensorFlow, but don't crash if missing
+try:
+    import tensorflow as tf
+    TF_AVAILABLE = True
+except ImportError:
+    TF_AVAILABLE = False
 
 # Turn off noisy TensorFlow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+@pytest.mark.skipif(not TF_AVAILABLE, reason="TensorFlow not installed")
 class TestDLModel:
     
     @pytest.fixture
