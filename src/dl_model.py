@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.optimizers import Adam
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
@@ -37,8 +37,11 @@ def train_dl_model(df):
     
     # 3. Build the Neural Network (Lecture 10 architecture)
     model = Sequential([
+        # Explicit Input Layer (Best Practice)
+        Input(shape=(X_train.shape[1],)),
+        
         # Layer 1: 64 Neurons, ReLU activation
-        Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+        Dense(64, activation='relu'),
         
         # Dropout: Randomly turn off 20% of neurons to prevent overfitting
         Dropout(0.2),

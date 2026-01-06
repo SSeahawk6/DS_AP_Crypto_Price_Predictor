@@ -69,5 +69,6 @@ class TestDLModel:
         
         assert model is not None
         # Check that the input layer accepted 7 features instead of 8
-        input_shape = model.layers[0].input_shape
+        # shape is (None, 7)
+        input_shape = model.input_shape
         assert input_shape[1] == 7
