@@ -211,23 +211,63 @@ class Backtester:
 
     def plot_results(self, df, filename="results/backtest_chart.png"):
         """
-        Visualizes Strategy Value vs. Asset Price for the report.
+        Visualizes Strategy Value, Buy/Sell Signals, and Drawdown Analysis.
+        Generates a 3-panel professional financial report chart.
         """
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        # Use set_style from this module (which is effectively self as it's global func now or we just use plt directly but we defined set_style above)
-        set_style() 
-        plt.figure(figsize=(12, 6))
+        set_style()
         
-        plt.subplot(2, 1, 1)
-        plt.plot(self.history, label='ML Strategy Value', color='blue')
-        plt.title('Strategy Performance')
-        plt.legend()
+        # Create 3 subplots sharing the x-axis
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12), sharex=True, gridspec_kw={'height_ratios': [2, 2, 1]})
         
-        plt.subplot(2, 1, 2)
-        plt.plot(df['price'].values, label='BTC Price (Buy & Hold)', color='gray', alpha=0.5)
-        plt.title('Asset Price Context')
-        plt.legend()
+        # --- Panel 1: Strategy Performance ---
+        ax1.plot(df.index, self.history, label='ML Strategy Value ($)', color='#1f77b4', linewidth=2)
+        ax1.set_title('Strategy Equity Curve', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Portfolio Value ($)')
+        ax1.legend(loc='upper left')
+        
+        # --- Panel 2: Price Action & Trade Signals ---
+        ax2.plot(df.index, df['price'], label='Asset Price (Hold)', color='gray', alpha=0.5)
+        
+        # Identify Buy/Sell points
+        # Buy when prediction becomes 1 (and wasn't before) - simplified logic: buy signal is whenever pred=1
+        # For visualization, we plot a marker every time we HOLD the asset? 
+        # Better: Plot marker only on CHANGE of position.
+        
+        buy_signals = df[df['prediction'] == 1]
+        sell_signals = df[df['prediction'] == 0]
+        
+        # We only want to plot markers where the signal CHANGED to avoid clutter
+        # Create a 'signal_change' mask
+        df['signal_change'] = df['prediction'].diff()
+        
+        buys = df[df['signal_change'] == 1]  # 0 -> 1
+        sells = df[df['signal_change'] == -1] # 1 -> 0
+        
+        ax2.scatter(buys.index, buys['price'], marker='^', color='green', s=100, label='Buy Signal', zorder=5)
+        ax2.scatter(sells.index, sells['price'], marker='v', color='red', s=100, label='Sell Signal', zorder=5)
+        
+        ax2.set_title('Trade Signals (Green=Buy, Red=Sell)', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('Price ($)')
+        ax2.legend(loc='upper left')
+
+        # --- Panel 3: Drawdown Analysis ---
+        # Calculate Drawdown series
+        portfolio_series = pd.Series(self.history, index=df.index)
+        rolling_max = portfolio_series.cummax()
+        drawdown = (portfolio_series - rolling_max) / rolling_max
+        
+        ax3.fill_between(drawdown.index, drawdown, 0, color='red', alpha=0.3, label='Drawdown')
+        ax3.plot(drawdown.index, drawdown, color='red', linewidth=1)
+        ax3.set_title('Risk Analysis (Drawdown)', fontsize=14, fontweight='bold')
+        ax3.set_ylabel('% from Peak')
+        ax3.set_xlabel('Date')
+        
+        # Format percentages on Y-axis for drawdown
+        vals = ax3.get_yticks()
+        ax3.set_yticklabels(['{:,.0%}'.format(x) for x in vals])
         
         plt.tight_layout()
-        plt.savefig(filename)
+        plt.savefig(filename, dpi=300) # High Resolution for Report
         plt.close()
+        print(f"[INFO] Saved high-res chart to {filename}")
