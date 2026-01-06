@@ -1,0 +1,176 @@
+# This module defines Machine Learning and Deep Learning models.
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, RandomizedSearchCV
+from sklearn.metrics import accuracy_score
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Input
+from tensorflow.keras.optimizers import Adam
+from sklearn.preprocessing import StandardScaler
+
+# -------------------------
+# Random Forest Model
+# -------------------------
+
+def train_rf_model(df):
+    """
+    Trains a Random Forest model using GridSearchCV.
+    Now includes Lag Features (Memory) and new Target Threshold.
+    """
+    # 1. Define Features (UPDATED LIST)
+    features = [
+        'sma_20', 'bb_upper', 'bb_lower', 'rsi', 
+        'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_7'
+    ]
+    
+    # Safety check: ensure these columns actually exist
+    # We filter features to prevent the model from crashing if a column failed to generate
+    available_features = [f for f in features if f in df.columns]
+    
+    if len(available_features) < len(features):
+        print(f"[WARNING] Some features are missing! Using only: {available_features}")
+    
+    X = df[available_features]
+    y = df['target']
+    
+    # 2. Time-Based Split (80/20)
+    # We use a simple time-based split instead of random shuffling because financial data 
+    # is sequential. Random splitting would introduce "look-ahead bias" (training on future data).
+    split_point = int(len(df) * 0.8)
+    
+    X_train = X.iloc[:split_point]
+    X_test = X.iloc[split_point:]
+    
+    y_train = y.iloc[:split_point]
+    y_test = y.iloc[split_point:]
+    
+    print(f"[INFO] Training on {len(X_train)} rows with {len(available_features)} features...")
+    
+    # 3. Hyperparameter Tuning
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5]
+    }
+    
+    rf = RandomForestClassifier(random_state=42)
+    grid_search = GridSearchCV(rf, param_grid, cv=3, scoring='accuracy')
+    grid_search.fit(X_train, y_train)
+    
+    best_model = grid_search.best_estimator_
+    print(f"[INFO] Best Parameters found: {grid_search.best_params_}")
+    
+    # 4. Evaluate
+    predictions = best_model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    print(f"[RESULT] Model Accuracy on Test Set: {accuracy:.2%}")
+    
+    return best_model, X_test, y_test, predictions
+
+class ModelOptimizer:
+    def __init__(self, n_splits=5, random_state=42):
+        self.cv = TimeSeriesSplit(n_splits=n_splits)
+        self.random_state = random_state
+
+    def optimize_random_forest(self, X, y, n_iter=10):
+        """
+        Finds the best hyperparameters using Randomized Search.
+        """
+        rf = RandomForestClassifier(random_state=self.random_state)
+        
+        param_grid = {
+            'n_estimators': [50, 100, 200],
+            'max_depth': [None, 10, 20],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4]
+        }
+        
+        search = RandomizedSearchCV(
+            estimator=rf,
+            param_distributions=param_grid,
+            n_iter=n_iter,
+            cv=self.cv,
+            scoring='accuracy',
+            n_jobs=-1,
+            random_state=self.random_state
+        )
+        
+        search.fit(X, y)
+        print(f"[INFO] Best Params: {search.best_params_}")
+        print(f"[INFO] Best Accuracy: {search.best_score_:.4f}")
+        
+        return search.best_estimator_
+
+
+# -------------------------
+# Deep Learning Model
+# -------------------------
+
+def train_dl_model(df):
+    """
+    Trains a Deep Learning model (Neural Network) for price prediction.
+    Architecture: Input -> Dense(64) -> Dropout -> Dense(32) -> Output
+    """
+    # 1. Define Features (Must match what we created in feature_engineer.py)
+    features = [
+        'sma_20', 'bb_upper', 'bb_lower', 'rsi', 
+        'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_7'
+    ]
+    
+    # Filter to ensure features exist
+    available_features = [f for f in features if f in df.columns]
+    X = df[available_features].values
+    y = df['target'].values
+    
+    # 2. Scale the Data (CRITICAL for Neural Networks)
+    # Neural Nets fail if inputs are not between 0 and 1 (or -1 and 1) because large values
+    # cause gradients to explode or vanish, stopping the learning process.
+    scaler = StandardScaler()
+    
+    # Time-based split
+    split = int(len(X) * 0.8)
+    X_train = scaler.fit_transform(X[:split])
+    X_test = scaler.transform(X[split:])
+    y_train, y_test = y[:split], y[split:]
+    
+    print(f"[INFO] Training Neural Network on {len(X_train)} rows...")
+    
+    # 3. Build the Neural Network (Lecture 10 architecture)
+    model = Sequential([
+        # Explicit Input Layer (Best Practice)
+        Input(shape=(X_train.shape[1],)),
+        
+        # Layer 1: 64 Neurons, ReLU activation
+        # ReLU is preferred over Sigmoid for hidden layers to avoid the vanishing gradient problem.
+        Dense(64, activation='relu'),
+        
+        # Dropout: Randomly turn off 20% of neurons to prevent overfitting
+        # This acts as a regularization technique, forcing the network to learn robust features.
+        Dropout(0.2),
+        
+        # Layer 2: 32 Neurons
+        Dense(32, activation='relu'),
+        
+        # Output Layer: 1 Neuron (Probability between 0 and 1)
+        Dense(1, activation='sigmoid')
+    ])
+    
+    model.compile(optimizer=Adam(learning_rate=0.001), 
+                  loss='binary_crossentropy', 
+                  metrics=['accuracy'])
+    
+    # 4. Train
+    model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0)
+    
+    # 5. Predict
+    # The NN outputs probabilities (e.g., 0.75). We convert to 0 or 1.
+    probs = model.predict(X_test, verbose=0)
+    predictions = (probs > 0.5).astype(int).flatten()
+    
+    acc = accuracy_score(y_test, predictions)
+    print(f"[RESULT] Neural Net Accuracy: {acc:.2%}")
+    
+    return model, X[split:], y[split:], predictions
