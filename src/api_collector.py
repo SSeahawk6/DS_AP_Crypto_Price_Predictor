@@ -1,4 +1,4 @@
-import yfinance as yf
+
 import pandas as pd
 import os
 
@@ -18,10 +18,20 @@ def fetch_crypto_data(coin_id, days):
     if not ticker:
         print(f"[ERROR] Coin '{coin_id}' not supported.")
         return None
+    print(f"[INFO] Checking cache for {ticker}...")
+    os.makedirs("data", exist_ok=True)
+    filename = f"data/{coin_id}_prices.csv"
+    
+    # Check if file exists
+    if os.path.exists(filename):
+        print(f"[INFO] Data found in cache: {filename}")
+        return filename
 
     print(f"[INFO] Downloading data for {ticker}...")
     
     try:
+        import yfinance as yf # Lazy import to avoid startup cost and crashes
+        
         # Fetch data using 'download' which is often more stable for formatting
         data = yf.download(ticker, period="5y", progress=False, auto_adjust=True)
         
