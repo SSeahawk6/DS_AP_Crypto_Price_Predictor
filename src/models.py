@@ -1,10 +1,10 @@
 # This module defines Machine Learning and Deep Learning models.
 
+from typing import Tuple, Any, List
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, RandomizedSearchCV
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 
@@ -22,7 +22,7 @@ except ImportError:
 # Random Forest Model
 # -------------------------
 
-def train_rf_model(df):
+def train_rf_model(df: pd.DataFrame) -> Tuple[Any, pd.DataFrame, pd.Series, np.ndarray]:
     """
     Trains a Random Forest model using GridSearchCV.
     Now includes Lag Features (Memory) and new Target Threshold.
@@ -78,11 +78,11 @@ def train_rf_model(df):
     return best_model, X_test, y_test, predictions
 
 class ModelOptimizer:
-    def __init__(self, n_splits=5, random_state=42):
+    def __init__(self, n_splits: int = 5, random_state: int = 42):
         self.cv = TimeSeriesSplit(n_splits=n_splits)
         self.random_state = random_state
 
-    def optimize_random_forest(self, X, y, n_iter=10):
+    def optimize_random_forest(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 10) -> Any:
         """
         Finds the best hyperparameters using Randomized Search.
         """
@@ -116,7 +116,7 @@ class ModelOptimizer:
 # Deep Learning Model
 # -------------------------
 
-def train_dl_model(df):
+def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
     """
     Trains a Deep Learning model (Neural Network) for price prediction.
     Architecture: Input -> Dense(64) -> Dropout -> Dense(32) -> Output

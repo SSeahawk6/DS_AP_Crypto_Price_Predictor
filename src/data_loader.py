@@ -3,7 +3,9 @@
 import pandas as pd
 import os
 
-def fetch_crypto_data(coin_id, days):
+from typing import Optional
+
+def fetch_crypto_data(coin_id: str, days: int) -> Optional[str]:
     """
     Fetches data and extracts RAW VALUES to prevent CSV corruption.
     """
@@ -84,7 +86,7 @@ def fetch_crypto_data(coin_id, days):
         print(f"[WARN] yfinance failed: {e}. Trying direct HTTP download...")
         return download_via_requests(ticker, days, coin_id)
 
-def download_via_requests(ticker, days, coin_id):
+def download_via_requests(ticker: str, days: int, coin_id: str) -> Optional[str]:
     """
     Fallback method to download CSV directly from Yahoo Finance query API.
     Bypasses yfinance library issues on older Python versions.

@@ -1,6 +1,7 @@
 # This module handles backtesting and result visualization.
 
 import pandas as pd
+from typing import List, Dict, Optional, Any
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -22,7 +23,7 @@ def set_style():
     plt.rcParams['lines.linewidth'] = 2
     plt.rcParams['font.size'] = 12
 
-def plot_price_history(df, coin_name):
+def plot_price_history(df: pd.DataFrame, coin_name: str) -> None:
     """Plots raw price history to visualize market cycles."""
     set_style()
     plt.figure()
@@ -39,7 +40,7 @@ def plot_price_history(df, coin_name):
     plt.close()
     print(f"[INFO] Saved price chart to {save_path}")
 
-def plot_technical_indicators(df, coin_name):
+def plot_technical_indicators(df: pd.DataFrame, coin_name: str) -> None:
     """Visualizes calculated indicators like RSI and Bollinger Bands."""
     set_style()
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
@@ -65,7 +66,7 @@ def plot_technical_indicators(df, coin_name):
     plt.savefig(save_path)
     plt.close()
 
-def plot_confusion_matrix(cm, model_name):
+def plot_confusion_matrix(cm: np.ndarray, model_name: str) -> None:
     """Generates a heatmap of model predictions vs actual outcomes."""
     set_style()
     plt.figure(figsize=(8, 6))
@@ -79,7 +80,7 @@ def plot_confusion_matrix(cm, model_name):
     plt.savefig(save_path)
     plt.close()
 
-def plot_feature_importance(model, feature_names, filename='results/feature_importance.png'):
+def plot_feature_importance(model: Any, feature_names: pd.Index, filename: str = 'results/feature_importance.png') -> None:
     """Visualizes which indicators had the most predictive power."""
     if not hasattr(model, 'feature_importances_'):
         return
@@ -111,7 +112,7 @@ class Backtester:
         history (list): Time-series of total portfolio value.
     """
     
-    def __init__(self, initial_balance=10000):
+    def __init__(self, initial_balance: float = 10000):
         """
         Initializes the backtester with a starting balance.
         Args:
@@ -119,10 +120,10 @@ class Backtester:
         """
         self.initial_balance = initial_balance
         self.cash = initial_balance
-        self.holdings = 0
-        self.history = []
+        self.holdings = 0.0
+        self.history: List[float] = []
 
-    def buy(self, price, date=None):
+    def buy(self, price: float, date: Optional[str] = None) -> None:
         """
         Executes a buy order using all available cash.
         """
@@ -130,7 +131,7 @@ class Backtester:
             self.holdings = self.cash / price
             self.cash = 0
 
-    def sell(self, price, date=None):
+    def sell(self, price: float, date: Optional[str] = None) -> None:
         """
         Executes a sell order for all current holdings.
         """
@@ -138,7 +139,7 @@ class Backtester:
             self.cash = self.holdings * price
             self.holdings = 0
 
-    def run(self, df):
+    def run(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Runs the simulation using a DataFrame containing 'price' and 'prediction'.
         Args:
@@ -169,7 +170,7 @@ class Backtester:
             
         return pd.DataFrame({'value': self.history}, index=df.index)
 
-    def calculate_metrics(self):
+    def calculate_metrics(self) -> Dict[str, str]:
         """
         Calculates Sharpe Ratio and Max Drawdown based on trade history.
         Returns:
@@ -209,7 +210,7 @@ class Backtester:
             "Max Drawdown": f"{max_drawdown:.2%}"
         }
 
-    def plot_results(self, df, filename="results/backtest_chart.png"):
+    def plot_results(self, df: pd.DataFrame, filename: str = "results/backtest_chart.png") -> None:
         """
         Visualizes Strategy Value, Buy/Sell Signals, and Drawdown Analysis.
         Generates a 3-panel professional financial report chart.
