@@ -79,7 +79,7 @@ def plot_confusion_matrix(cm, model_name):
     plt.savefig(save_path)
     plt.close()
 
-def plot_feature_importance(model, feature_names):
+def plot_feature_importance(model, feature_names, filename='results/feature_importance.png'):
     """Visualizes which indicators had the most predictive power."""
     if not hasattr(model, 'feature_importances_'):
         return
@@ -92,7 +92,7 @@ def plot_feature_importance(model, feature_names):
     plt.xticks(range(len(importances)), [feature_names[i] for i in indices], rotation=45)
     plt.title('Random Forest Feature Importance')
     plt.tight_layout()
-    plt.savefig('results/feature_importance.png')
+    plt.savefig(filename)
     plt.close()
 
 

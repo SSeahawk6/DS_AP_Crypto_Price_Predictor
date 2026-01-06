@@ -81,5 +81,68 @@ def fetch_crypto_data(coin_id, days):
         return filename
         
     except Exception as e:
-        print(f"[ERROR] Failed to fetch data: {e}")
+        print(f"[WARN] yfinance failed: {e}. Trying direct HTTP download...")
+        return download_via_requests(ticker, days, coin_id)
+
+def download_via_requests(ticker, days, coin_id):
+    """
+    Fallback method to download CSV directly from Yahoo Finance query API.
+    Bypasses yfinance library issues on older Python versions.
+    """
+    import requests
+    import time
+    import io
+
+    # Calculate timestamps
+    end_time = int(time.time())
+    start_time = end_time - (days * 24 * 60 * 60)
+    
+    url = f"https://query1.finance.yahoo.com/v7/finance/download/{ticker}?period1={start_time}&period2={end_time}&interval=1d&events=history&includeAdjustedClose=true"
+    # Actually, let's correct the variable name
+    url = f"https://query1.finance.yahoo.com/v7/finance/download/{ticker}?period1={start_time}&period2={end_time}&interval=1d&events=history&includeAdjustedClose=true"
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"[ERROR] Direct download failed with status: {response.status_code}")
+            return None
+            
+        # Parse CSV
+        df = pd.read_csv(io.StringIO(response.text))
+        
+        # Normalize columns
+        df.columns = [c.lower() for c in df.columns]
+        
+        # Standardize for our pipeline
+        # Yahoo CSV usually has: Date, Open, High, Low, Close, Adj Close, Volume
+        if 'date' in df.columns:
+            df.rename(columns={'date': 'timestamp'}, inplace=True)
+            
+        # Ensure we have 'price' (Close) and 'total_volume' (Volume)
+        if 'close' in df.columns:
+            df['price'] = df['close']
+        elif 'adj close' in df.columns:
+            df['price'] = df['adj close']
+            
+        if 'volume' in df.columns:
+            df['total_volume'] = df['volume']
+            
+        df['market_cap'] = 0.0 # Placeholder
+        
+        # Filter and Save
+        if len(df) > days:
+            df = df.iloc[-days:]
+            
+        os.makedirs("data/raw", exist_ok=True)
+        filename = f"data/raw/{coin_id}_prices.csv"
+        df.to_csv(filename, index=False)
+        print(f"[SUCCESS] Direct download saved {len(df)} rows to {filename}")
+        return filename
+
+    except Exception as e:
+        print(f"[ERROR] Direct download completely failed: {e}")
         return None
