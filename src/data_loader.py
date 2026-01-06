@@ -1,3 +1,4 @@
+# This module acts as an API Collector to fetch data from Yahoo Finance.
 
 import pandas as pd
 import os
@@ -19,10 +20,12 @@ def fetch_crypto_data(coin_id, days):
         print(f"[ERROR] Coin '{coin_id}' not supported.")
         return None
     print(f"[INFO] Checking cache for {ticker}...")
-    os.makedirs("data", exist_ok=True)
-    filename = f"data/{coin_id}_prices.csv"
+    os.makedirs("data/raw", exist_ok=True)
+    filename = f"data/raw/{coin_id}_prices.csv"
     
     # Check if file exists
+    # We implement local caching to avoid hitting the API rate limits and to speed up development.
+    # Re-downloading static historical data is inefficient.
     if os.path.exists(filename):
         print(f"[INFO] Data found in cache: {filename}")
         return filename
@@ -30,7 +33,10 @@ def fetch_crypto_data(coin_id, days):
     print(f"[INFO] Downloading data for {ticker}...")
     
     try:
-        import yfinance as yf # Lazy import to avoid startup cost and crashes
+        import yfinance as yf # Lazy import
+        # We import yfinance here instead of at the top because it's a heavy library.
+        # This prevents the entire app from crashing on startup if yfinance isn't installed
+        # or if there's an internet issue, unless we explicitly call this function.
         
         # Fetch data using 'download' which is often more stable for formatting
         data = yf.download(ticker, period="5y", progress=False, auto_adjust=True)
@@ -65,8 +71,8 @@ def fetch_crypto_data(coin_id, days):
             df = df.iloc[-days:]
             
         # 6. Save
-        os.makedirs("data", exist_ok=True)
-        filename = f"data/{coin_id}_prices.csv"
+        os.makedirs("data/raw", exist_ok=True)
+        filename = f"data/raw/{coin_id}_prices.csv"
         df.to_csv(filename, index=False)
         
         # DEBUG: Print first row to prove it's numbers

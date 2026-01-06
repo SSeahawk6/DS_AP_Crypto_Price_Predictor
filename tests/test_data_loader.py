@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
-from src.api_collector import fetch_crypto_data
+from src.data_loader import fetch_crypto_data
 
 
 import sys
@@ -27,7 +27,7 @@ class TestAPICollector:
         data = pd.DataFrame(np.random.rand(10, 5), index=dates, columns=columns)
         return data
 
-    @patch('src.api_collector.pd.DataFrame.to_csv')
+    @patch('src.data_loader.pd.DataFrame.to_csv')
     def test_fetch_success(self, mock_to_csv, mock_yf_download, mock_yf_data):
         """Test happy path: Valid coin, API returns data, file 'saved'."""
         # 1. Setup the Mock
@@ -35,11 +35,11 @@ class TestAPICollector:
         
         # 2. Call the function
         # Ensure we don't hit the cache
-        with patch('src.api_collector.os.path.exists', return_value=False):
+        with patch('src.data_loader.os.path.exists', return_value=False):
             result_filename = fetch_crypto_data("bitcoin", days=5)
         
         # 3. Assertions
-        assert result_filename == "data/bitcoin_prices.csv"
+        assert result_filename == "data/raw/bitcoin_prices.csv"
         mock_yf_download.assert_called_once()
         args, kwargs = mock_yf_download.call_args
         assert args[0] == "BTC-USD"
@@ -55,15 +55,15 @@ class TestAPICollector:
         """Test how the function handles a crash in yfinance."""
         mock_yf_download.side_effect = Exception("API connection broken")
         
-        with patch('src.api_collector.os.path.exists', return_value=False):
+        with patch('src.data_loader.os.path.exists', return_value=False):
             result = fetch_crypto_data("bitcoin", days=5)
         
         assert result is None
 
-    @patch('src.api_collector.os.path.exists')
+    @patch('src.data_loader.os.path.exists')
     def test_fetch_cached_data(self, mock_exists, mock_yf_download):
         """Test that data is NOT re-downloaded if it exists."""
         mock_exists.return_value = True
         result = fetch_crypto_data("bitcoin", days=5)
-        assert result == "data/bitcoin_prices.csv"
+        assert result == "data/raw/bitcoin_prices.csv"
         mock_yf_download.assert_not_called()
