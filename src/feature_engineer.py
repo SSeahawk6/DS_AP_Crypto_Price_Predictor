@@ -8,7 +8,7 @@ def calculate_rsi(data: pd.DataFrame, window: int = 14) -> pd.Series:
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def add_technical_indicators(df: pd.DataFrame, threshold: float = 0.005) -> pd.DataFrame:
     df = df.copy()
     
     # 1. Force Price to Numeric (Safety Check)
@@ -20,6 +20,7 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
         
     # 2. Add Indicators
     df['sma_20'] = df['price'].rolling(window=20).mean()
+    df['sma_50'] = df['price'].rolling(window=50).mean()
     df['std_20'] = df['price'].rolling(window=20).std()
     df['bb_upper'] = df['sma_20'] + (df['std_20'] * 2)
     df['bb_lower'] = df['sma_20'] - (df['std_20'] * 2)
@@ -29,10 +30,10 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     for lag in [1, 2, 3, 7]:
         df[f'return_lag_{lag}'] = df['price'].pct_change().shift(lag)
     
-    # 4. Create Target (1 if Price Up > 0.5%, 0 otherwise)
+    # 4. Create Target (1 if Price Up > threshold, 0 otherwise)
     # This "Picky Trader" logic avoids trading on noise or tiny gains typically eaten by fees.
     df['next_day_return'] = df['price'].pct_change().shift(-1)
-    df['target'] = (df['next_day_return'] > 0.005).astype(int)
+    df['target'] = (df['next_day_return'] > threshold).astype(int)
     
     # 5. Drop NaNs created by windows
     df.dropna(inplace=True)

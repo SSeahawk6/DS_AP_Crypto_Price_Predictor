@@ -3,16 +3,16 @@ import pandas as pd
 from src.data_loader import fetch_crypto_data
 from src.feature_engineer import add_technical_indicators
 from src.models import train_rf_model, ModelOptimizer, train_dl_model
-from src.evaluation import Backtester, plot_feature_importance
+from src.evaluation import Backtester, plot_feature_importance, plot_strategy_comparison
 from src.utils import setup_environment
 
-def process_coin(coin, days, initial_balance=10000):
+def process_coin(coin, days, threshold, initial_balance=10000):
     """
     Runs the full pipeline for a single coin.
     Returns a dictionary of metrics.
     """
     print(f"\n{'='*50}")
-    print(f"PROCESSING: {coin.upper()}")
+    print(f"PROCESSING: {coin.upper()} | Threshold={threshold}")
     print(f"{'='*50}")
     
     # 1. Data Collection
@@ -25,7 +25,7 @@ def process_coin(coin, days, initial_balance=10000):
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df.set_index('timestamp', inplace=True)
     
-    df_features = add_technical_indicators(df)
+    df_features = add_technical_indicators(df, threshold=threshold)
     if df_features.empty:
         print("[ERROR] No data after processing.")
         return None
@@ -84,14 +84,44 @@ def process_coin(coin, days, initial_balance=10000):
     
     print(f"[RESULT] {coin.capitalize()} Metrics: {metrics}")
     backtester.plot_results(test_df, filename=f"results/chart_{coin}.png")
+
+    # --- Benchmark: Buy & Hold ---
+    print("--- Calculating Benchmark (Buy & Hold) ---")
+    test_df_bh = test_df.copy()
+    test_df_bh['prediction'] = 1  # Always Buy
     
-    return metrics
+    bh_backtester = Backtester(initial_balance=initial_balance)
+    bh_backtester.run(test_df_bh)
+    bh_metrics = bh_backtester.calculate_metrics()
+    print(f"[BENCHMARK] {coin.capitalize()} B&H Metrics: {bh_metrics}")
+
+    # --- Benchmark: SMA Crossover (Rule-Based) ---
+    print("--- Calculating Benchmark (SMA Crossover) ---")
+    test_df_sma = test_df.copy()
+    # Signal: 1 if SMA_20 > SMA_50 (Golden Cross), else 0
+    test_df_sma['prediction'] = (test_df_sma['sma_20'] > test_df_sma['sma_50']).astype(int)
+    
+    sma_backtester = Backtester(initial_balance=initial_balance)
+    sma_backtester.run(test_df_sma)
+    sma_metrics = sma_backtester.calculate_metrics()
+    print(f"[BENCHMARK] {coin.capitalize()} SMA Cross Metrics: {sma_metrics}")
+
+    # --- Generate Comparison Chart ---
+    strategies = {
+        'ML Strategy': backtester.history,
+        'Buy & Hold': bh_backtester.history,
+        'SMA Crossover': sma_backtester.history
+    }
+    plot_strategy_comparison(test_df, strategies, filename=f"results/comparison_{coin}.png")
+    
+    return metrics, bh_metrics, sma_metrics
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--coins", type=str, default="all", 
                         help="Comma-separated list of coins or 'all' (default: all)")
     parser.add_argument("--days", type=int, default=1825, help="Number of days of data (default: 5 years)")
+    parser.add_argument("--threshold", type=float, default=0.005, help="Target return threshold (default: 0.005)")
     args = parser.parse_args()
 
     setup_environment()
@@ -104,25 +134,45 @@ def main():
     else:
         target_coins = [c.strip().lower() for c in args.coins.split(',')]
 
+    # Dynamic Threshold Configuration
+    # Rationale: Mature assets (BTC, ETH) need lower thresholds to capture steady growth.
+    # Volatile assets (SOL, DOGE) need higher thresholds to filter noise.
+    COIN_THRESHOLDS = {
+        "bitcoin": 0.001,
+        "ethereum": 0.001,
+        "solana": 0.005,
+        "dogecoin": 0.005
+    }
+
     # Run Loop
     report = {}
     for coin in target_coins:
         if coin not in ALL_COINS:
             print(f"[WARN] Skipping unsupported coin: {coin}")
             continue
+        
+        # Use specific threshold if available, else default to args.threshold
+        threshold = COIN_THRESHOLDS.get(coin, args.threshold)
             
-        metrics = process_coin(coin, args.days)
-        if metrics:
-            report[coin] = metrics
+        result = process_coin(coin, args.days, threshold)
+        if result:
+            metrics, bh_metrics, sma_metrics = result
+            report[coin] = {'ml': metrics, 'bh': bh_metrics, 'sma': sma_metrics}
 
     # Final Summary
     print("\n" + "="*50)
     print("FINAL PORTFOLIO REPORT")
     print("="*50)
-    print(f"{'COIN':<15} | {'RETURN':<10} | {'SHARPE':<10} | {'DRAWDOWN':<10}")
-    print("-" * 55)
-    for coin, m in report.items():
-        print(f"{coin.capitalize():<15} | {m['Total Return']:<10} | {m['Sharpe Ratio']:<10} | {m['Max Drawdown']:<10}")
+    print(f"{'COIN':<10} | {'STRATEGY':<10} | {'RETURN':<8} | {'SHARPE':<6} | {'DD':<8}")
+    print("-" * 65)
+    for coin, data in report.items():
+        ml = data['ml']
+        bh = data['bh']
+        sma = data['sma']
+        print(f"{coin.capitalize():<10} | {'ML':<10} | {ml['Total Return']:<8} | {ml['Sharpe Ratio']:<6} | {ml['Max Drawdown']:<8}")
+        print(f"{'':<10} | {'Buy&Hold':<10} | {bh['Total Return']:<8} | {bh['Sharpe Ratio']:<6} | {bh['Max Drawdown']:<8}")
+        print(f"{'':<10} | {'SMA Cross':<10} | {sma['Total Return']:<8} | {sma['Sharpe Ratio']:<6} | {sma['Max Drawdown']:<8}")
+        print("-" * 65)
     print("="*50)
 
 if __name__ == "__main__":

@@ -272,3 +272,39 @@ class Backtester:
         plt.savefig(filename, dpi=300) # High Resolution for Report
         plt.close()
         print(f"[INFO] Saved high-res chart to {filename}")
+
+def plot_strategy_comparison(df: pd.DataFrame, strategies: Dict[str, List[float]], filename: str = "results/strategy_comparison.png") -> None:
+    """
+    Plots a direct comparison of multiple strategies on the same Equity Curve chart.
+    """
+    set_style()
+    
+    # 1. Equity Curves
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+    
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c'] # Blue (ML), Orange (B&H), Green (SMA)
+    
+    for i, (name, values) in enumerate(strategies.items()):
+        color = colors[i % len(colors)]
+        ax1.plot(df.index, values, label=name, color=color, linewidth=2)
+        
+        # Calculate Drawdown
+        series = pd.Series(values, index=df.index)
+        rolling_max = series.cummax()
+        drawdown = (series - rolling_max) / rolling_max
+        ax2.plot(drawdown.index, drawdown, label=name, color=color, linewidth=1, alpha=0.8)
+        
+    ax1.set_title('Strategy Equity Curve Comparison', fontsize=14, fontweight='bold')
+    ax1.set_ylabel('Portfolio Value ($)')
+    ax1.legend(loc='upper left')
+    
+    ax2.set_title('Drawdown Analysis', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('% from Peak')
+    ax2.set_xlabel('Date')
+    ax2.legend()
+    
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.close()
+    print(f"[INFO] Saved comparison chart to {filename}")
+

@@ -112,6 +112,5 @@ class TestBacktester:
         bt.plot_results(sample_data, filename="results/test_chart.png")
         
         # verify the plot function was called
-        # verify the plot function was called
         mock_plt.subplots.assert_called()
         mock_plt.savefig.assert_called_with("results/test_chart.png", dpi=300)
