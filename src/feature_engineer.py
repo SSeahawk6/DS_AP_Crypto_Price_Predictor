@@ -29,9 +29,10 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     for lag in [1, 2, 3, 7]:
         df[f'return_lag_{lag}'] = df['price'].pct_change().shift(lag)
     
-    # 4. Create Target (1 if Price Up, 0 if Down)
+    # 4. Create Target (1 if Price Up > 0.5%, 0 otherwise)
+    # This "Picky Trader" logic avoids trading on noise or tiny gains typically eaten by fees.
     df['next_day_return'] = df['price'].pct_change().shift(-1)
-    df['target'] = (df['next_day_return'] > 0.0).astype(int)
+    df['target'] = (df['next_day_return'] > 0.005).astype(int)
     
     # 5. Drop NaNs created by windows
     df.dropna(inplace=True)

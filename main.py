@@ -97,7 +97,7 @@ def main():
     setup_environment()
 
     # Define supported coins
-    ALL_COINS = ["bitcoin", "ethereum", "solana", "dogecoin", "cardano"]
+    ALL_COINS = ["bitcoin", "ethereum", "solana", "dogecoin"]
     
     if args.coins.lower() == "all":
         target_coins = ALL_COINS

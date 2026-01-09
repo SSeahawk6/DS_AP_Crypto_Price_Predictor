@@ -13,8 +13,7 @@ def fetch_crypto_data(coin_id: str, days: int) -> Optional[str]:
         "bitcoin": "BTC-USD",
         "ethereum": "ETH-USD",
         "solana": "SOL-USD",
-        "dogecoin": "DOGE-USD",
-        "cardano": "ADA-USD"
+        "dogecoin": "DOGE-USD"
     }
     
     ticker = ticker_map.get(coin_id.lower())
