@@ -35,9 +35,15 @@ def process_coin(coin, days, threshold, initial_balance=10000):
     y = df_features['target']
     
     # Time-based split for training (80/20)
+    # Time-based split: 80% train (includes validation for tuning), 20% test
+    # CRITICAL: We lock away X_test until the very end to prevent data leakage.
     split = int(len(X) * 0.8)
-    X_train, X_test = X.iloc[:split], X.iloc[split:]
-    y_train, y_test = y.iloc[:split], y.iloc[split:]
+    
+    X_train = X.iloc[:split] # Used for Optimization + Training
+    y_train = y.iloc[:split]
+    
+    X_test = X.iloc[split:] # Used ONLY for final evaluation
+    y_test = y.iloc[split:]
 
     # ---------------------------------------------------------
     # STRETCH GOAL 1: Model Comparison (Random Forest vs Deep Learning)
@@ -45,8 +51,11 @@ def process_coin(coin, days, threshold, initial_balance=10000):
     
     # --- Model A: Random Forest (Optimized) ---
     print("\n[MODEL A] Random Forest Optimization...")
+    # Fix: Optimize ONLY on the Train set, not the full dataset
     optimizer = ModelOptimizer(n_splits=3)
-    rf_model = optimizer.optimize_random_forest(X, y, n_iter=5)
+    rf_model = optimizer.optimize_random_forest(X_train, y_train, n_iter=5)
+    
+    # Refit on the full Train set before predicting on Test
     rf_model.fit(X_train, y_train)
     rf_preds = rf_model.predict(X_test)
     

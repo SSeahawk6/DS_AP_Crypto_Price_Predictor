@@ -13,6 +13,7 @@ try:
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, Dropout, Input
     from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.callbacks import EarlyStopping
     TF_AVAILABLE = True
 except ImportError:
     print("[WARN] TensorFlow not found. Deep Learning model will be skipped.")
@@ -174,8 +175,23 @@ def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
                   loss='binary_crossentropy', 
                   metrics=['accuracy'])
     
-    # 4. Train
-    model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0)
+    # 4. Train with Early Stopping
+    # We use 20% of X_train as a validation set to monitor overfitting.
+    early_stop = EarlyStopping(
+        monitor='val_loss', 
+        patience=5, 
+        restore_best_weights=True,
+        verbose=1
+    )
+    
+    model.fit(
+        X_train, y_train, 
+        epochs=50, 
+        batch_size=16, 
+        validation_split=0.2, # Create internal validation set
+        callbacks=[early_stop],
+        verbose=0
+    )
     
     # 5. Predict
     # The NN outputs probabilities (e.g., 0.75). We convert to 0 or 1.
