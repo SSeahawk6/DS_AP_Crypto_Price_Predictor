@@ -15,12 +15,12 @@ def process_coin(coin, days, threshold, initial_balance=10000):
     print(f"PROCESSING: {coin.upper()} | Threshold={threshold}")
     print(f"{'='*50}")
     
-    # 1. Data Collection
+    # Data Collection
     csv_path = fetch_crypto_data(coin, days)
     if not csv_path:
         return None
 
-    # 2. Feature Engineering
+    # Feature Engineering
     df = pd.read_csv(csv_path)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df.set_index('timestamp', inplace=True)
@@ -30,13 +30,11 @@ def process_coin(coin, days, threshold, initial_balance=10000):
         print("[ERROR] No data after processing.")
         return None
 
-    # 3. Prepare Data
+    # Prepare Data
     X = df_features.drop(['target', 'next_day_return', 'price'], axis=1)
     y = df_features['target']
     
-    # Time-based split for training (80/20)
-    # Time-based split: 80% train (includes validation for tuning), 20% test
-    # CRITICAL: We lock away X_test until the very end to prevent data leakage.
+    # Time-based split: 80% train / 20% test. X_test is locked until final evaluation to prevent data leakage.
     split = int(len(X) * 0.8)
     
     X_train = X.iloc[:split] # Used for Optimization + Training
@@ -45,13 +43,12 @@ def process_coin(coin, days, threshold, initial_balance=10000):
     X_test = X.iloc[split:] # Used ONLY for final evaluation
     y_test = y.iloc[split:]
 
-    # ---------------------------------------------------------
-    # STRETCH GOAL 1: Model Comparison (Random Forest vs Deep Learning)
-    # ---------------------------------------------------------
+    # Model Comparison (Random Forest vs Deep Learning)
     
-    # --- Model A: Random Forest (Optimized) ---
+    # --- Random Forest ---
     print("\n[MODEL A] Random Forest Optimization...")
-    # Fix: Optimize ONLY on the Train set, not the full dataset
+    # Optimize ONLY on the Train set
+
     optimizer = ModelOptimizer(n_splits=3)
     rf_model = optimizer.optimize_random_forest(X_train, y_train, n_iter=5)
     
@@ -59,40 +56,37 @@ def process_coin(coin, days, threshold, initial_balance=10000):
     rf_model.fit(X_train, y_train)
     rf_preds = rf_model.predict(X_test)
     
-    # STRETCH GOAL 2: Feature Importance
+    # Feature Importance
     print("[INFO] Generating Feature Importance Chart...")
     plot_feature_importance(rf_model, X.columns, filename=f"results/feature_importance_{coin}.png")
 
-    # --- Model B: Deep Learning (Neural Network) ---
+    # --- Deep Learning ---
     print("\n[MODEL B] Deep Learning Training...")
-    # train_dl_model handles scaling internally, passing raw df is safer
+
     try:
         dl_model, _, _, dl_preds = train_dl_model(df_features)
     except Exception as e:
         print(f"[WARN] DL Model Failed: {e}")
         dl_preds = []
 
-    # ---------------------------------------------------------
-    # Backtesting (Using Best Model - let's default to Random Forest for consistency)
-    # ---------------------------------------------------------
+    # --- Random Forest Strategy ---
     print("\n--- Starting Backtest (Random Forest Strategy) ---")
     
-    # We need to align predictions with the test dataframe index
+    # Align predictions with test set index
     test_df = df_features.iloc[split:].copy()
     
-    # Ensure lengths match (sometimes DL drops different number of rows, but here we use RF)
     if len(rf_preds) != len(test_df):
         print(f"[WARNING] Length mismatch: Preds {len(rf_preds)} vs Test DF {len(test_df)}")
         test_df = test_df.iloc[-len(rf_preds):]
         
     test_df['prediction'] = rf_preds
     
-    backtester = Backtester(initial_balance=initial_balance)
-    backtester.run(test_df)
-    metrics = backtester.calculate_metrics()
+    rf_backtester = Backtester(initial_balance=initial_balance)
+    rf_backtester.run(test_df)
+    rf_metrics = rf_backtester.calculate_metrics()
     
-    print(f"[RESULT] {coin.capitalize()} Metrics: {metrics}")
-    backtester.plot_results(test_df, filename=f"results/chart_{coin}.png")
+    print(f"[RESULT] {coin.capitalize()} Metrics: {rf_metrics}")
+    rf_backtester.plot_results(test_df, filename=f"results/chart_{coin}.png")
 
     # --- Benchmark: Buy & Hold ---
     print("--- Calculating Benchmark (Buy & Hold) ---")
@@ -104,26 +98,54 @@ def process_coin(coin, days, threshold, initial_balance=10000):
     bh_metrics = bh_backtester.calculate_metrics()
     print(f"[BENCHMARK] {coin.capitalize()} B&H Metrics: {bh_metrics}")
 
-    # --- Benchmark: SMA Crossover (Rule-Based) ---
+    # --- Benchmark: SMA Crossover ---
     print("--- Calculating Benchmark (SMA Crossover) ---")
     test_df_sma = test_df.copy()
-    # Signal: 1 if SMA_20 > SMA_50 (Golden Cross), else 0
+    # Signal: 1 if SMA_20 > SMA_50 (Golden Cross)
     test_df_sma['prediction'] = (test_df_sma['sma_20'] > test_df_sma['sma_50']).astype(int)
     
     sma_backtester = Backtester(initial_balance=initial_balance)
     sma_backtester.run(test_df_sma)
     sma_metrics = sma_backtester.calculate_metrics()
-    print(f"[BENCHMARK] {coin.capitalize()} SMA Cross Metrics: {sma_metrics}")
 
-    # --- Generate Comparison Chart ---
+    # --- Deep Learning Strategy ---
+    dl_metrics = {"Total Return": "N/A", "Sharpe Ratio": "N/A", "Max Drawdown": "N/A"}
+    if len(dl_preds) > 0:
+        print("--- Calculating Deep Learning Metrics ---")
+        test_df_dl = df_features.iloc[split:].copy()
+        
+        # Align lengths
+        if len(dl_preds) != len(test_df_dl):
+             test_df_dl = test_df_dl.iloc[-len(dl_preds):]
+             
+        test_df_dl['prediction'] = dl_preds
+        
+        dl_backtester = Backtester(initial_balance=initial_balance)
+        dl_backtester.run(test_df_dl)
+        dl_metrics = dl_backtester.calculate_metrics()
+        print(f"[MODEL B] Deep Learning Metrics: {dl_metrics}")
+
+    # Visualization
+    
+    # Strategy Comparison Chart
     strategies = {
-        'ML Strategy': backtester.history,
-        'Buy & Hold': bh_backtester.history,
-        'SMA Crossover': sma_backtester.history
+        "Random Forest": rf_backtester.history,
+        "Deep Learning": dl_backtester.history if len(dl_preds) > 0 else [],
+        "Buy & Hold": bh_backtester.history,
+        "SMA Crossover": sma_backtester.history
     }
+    # Filter out empty strategies (e.g. if DL failed)
+    strategies = {k: v for k, v in strategies.items() if len(v) > 0}
+    
     plot_strategy_comparison(test_df, strategies, filename=f"results/comparison_{coin}.png")
     
-    return metrics, bh_metrics, sma_metrics
+    return {
+        "coin": coin,
+        "rf_metrics": rf_metrics,
+        "dl_metrics": dl_metrics,
+        "bh_metrics": bh_metrics,
+        "sma_metrics": sma_metrics
+    }
 
 def main():
     parser = argparse.ArgumentParser()
@@ -143,14 +165,12 @@ def main():
     else:
         target_coins = [c.strip().lower() for c in args.coins.split(',')]
 
-    # Dynamic Threshold Configuration
-    # Rationale: Mature assets (BTC, ETH) need lower thresholds to capture steady growth.
-    # Volatile assets (SOL, DOGE) need higher thresholds to filter noise.
+    # Configuration: Mature assets (BTC, ETH) need lower thresholds than volatile ones (SOL, DOGE).
     COIN_THRESHOLDS = {
         "bitcoin": 0.001,
         "ethereum": 0.001,
-        "solana": 0.005,
-        "dogecoin": 0.005
+        "solana": 0.001,
+        "dogecoin": 0.001
     }
 
     # Run Loop
@@ -165,8 +185,7 @@ def main():
             
         result = process_coin(coin, args.days, threshold)
         if result:
-            metrics, bh_metrics, sma_metrics = result
-            report[coin] = {'ml': metrics, 'bh': bh_metrics, 'sma': sma_metrics}
+            report[coin] = result
 
     # Final Summary
     print("\n" + "="*50)
@@ -175,12 +194,11 @@ def main():
     print(f"{'COIN':<10} | {'STRATEGY':<10} | {'RETURN':<8} | {'SHARPE':<6} | {'DD':<8}")
     print("-" * 65)
     for coin, data in report.items():
-        ml = data['ml']
-        bh = data['bh']
-        sma = data['sma']
-        print(f"{coin.capitalize():<10} | {'ML':<10} | {ml['Total Return']:<8} | {ml['Sharpe Ratio']:<6} | {ml['Max Drawdown']:<8}")
-        print(f"{'':<10} | {'Buy&Hold':<10} | {bh['Total Return']:<8} | {bh['Sharpe Ratio']:<6} | {bh['Max Drawdown']:<8}")
-        print(f"{'':<10} | {'SMA Cross':<10} | {sma['Total Return']:<8} | {sma['Sharpe Ratio']:<6} | {sma['Max Drawdown']:<8}")
+
+        print(f"{data['coin'].capitalize():<10} | Random Forest| {data['rf_metrics']['Total Return']:<8} | {data['rf_metrics']['Sharpe Ratio']:<6} | {data['rf_metrics']['Max Drawdown']:<8}")
+        print(f"{'':<10} | Deep Learning| {data['dl_metrics']['Total Return']:<8} | {data['dl_metrics']['Sharpe Ratio']:<6} | {data['dl_metrics']['Max Drawdown']:<8}")
+        print(f"{'':<10} | Buy&Hold     | {data['bh_metrics']['Total Return']:<8} | {data['bh_metrics']['Sharpe Ratio']:<6} | {data['bh_metrics']['Max Drawdown']:<8}")
+        print(f"{'':<10} | SMA Cross    | {data['sma_metrics']['Total Return']:<8} | {data['sma_metrics']['Sharpe Ratio']:<6} | {data['sma_metrics']['Max Drawdown']:<8}")
         print("-" * 65)
     print("="*50)
 

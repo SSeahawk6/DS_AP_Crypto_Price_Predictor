@@ -7,9 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# -------------------------
-# Visualization Tools
-# -------------------------
+# Viualization Tools
 
 def set_style():
     """Sets a professional plotting style for the report."""
@@ -97,9 +95,7 @@ def plot_feature_importance(model: Any, feature_names: pd.Index, filename: str =
     plt.close()
 
 
-# -------------------------
 # Backtester
-# -------------------------
 
 class Backtester:
     """
@@ -124,17 +120,13 @@ class Backtester:
         self.history: List[float] = []
 
     def buy(self, price: float, date: Optional[str] = None) -> None:
-        """
-        Executes a buy order using all available cash.
-        """
+        """Executes a buy order using all available cash."""
         if self.cash > 0:
             self.holdings = self.cash / price
             self.cash = 0
 
     def sell(self, price: float, date: Optional[str] = None) -> None:
-        """
-        Executes a sell order for all current holdings.
-        """
+        """Executes a sell order for all current holdings."""
         if self.holdings > 0:
             self.cash = self.holdings * price
             self.holdings = 0
@@ -186,7 +178,6 @@ class Backtester:
         portfolio_df = pd.DataFrame(self.history, columns=['value'])
         portfolio_df['returns'] = portfolio_df['value'].pct_change()
         
-        # --- FIX APPLIED HERE ---
         # The last value in history represents our final Net Worth (Cash + Crypto)
         final_value = self.history[-1]
         
@@ -196,7 +187,7 @@ class Backtester:
         std_return = portfolio_df['returns'].std()
         
         # Annualized Sharpe Ratio calculation (assuming Daily data)
-        # We assume 365 trading days for crypto (unlike 252 for stocks) because crypto trades 24/7.
+        # There are 365 trading days for crypto
         sharpe = (mean_return / std_return) * np.sqrt(365) if std_return > 0 else 0.0
             
         # Max Drawdown calculation
@@ -231,15 +222,10 @@ class Backtester:
         ax2.plot(df.index, df['price'], label='Asset Price (Hold)', color='gray', alpha=0.5)
         
         # Identify Buy/Sell points
-        # Buy when prediction becomes 1 (and wasn't before) - simplified logic: buy signal is whenever pred=1
-        # For visualization, we plot a marker every time we HOLD the asset? 
-        # Better: Plot marker only on CHANGE of position.
-        
         buy_signals = df[df['prediction'] == 1]
         sell_signals = df[df['prediction'] == 0]
         
-        # We only want to plot markers where the signal CHANGED to avoid clutter
-        # Create a 'signal_change' mask
+        # Create a 'signal_change' mask on only plot markers where the signal CHANGED to avoid clutter
         df['signal_change'] = df['prediction'].diff()
         
         buys = df[df['signal_change'] == 1]  # 0 -> 1
@@ -279,13 +265,24 @@ def plot_strategy_comparison(df: pd.DataFrame, strategies: Dict[str, List[float]
     """
     set_style()
     
-    # 1. Equity Curves
+    # Equity Curves
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
     
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c'] # Blue (ML), Orange (B&H), Green (SMA)
+    colors = ['#1f77b4', '#00008b', '#ff7f0e', '#2ca02c'] # Blue (RF), DarkBlue (DL), Orange (B&H), Green (SMA)
     
     for i, (name, values) in enumerate(strategies.items()):
-        color = colors[i % len(colors)]
+
+        if "Random Forest" in name or "ML Strategy" in name:
+            color = '#1f77b4' # Standard Blue
+        elif "Deep Learning" in name:
+            color = '#000080' # Navy Blue
+        elif "Buy & Hold" in name:
+            color = '#ff7f0e' # Orange
+        elif "SMA" in name:
+            color = '#2ca02c' # Green
+        else:
+            color = colors[i % len(colors)]
+            
         ax1.plot(df.index, values, label=name, color=color, linewidth=2)
         
         # Calculate Drawdown
