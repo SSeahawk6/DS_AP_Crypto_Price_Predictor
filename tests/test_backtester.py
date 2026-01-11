@@ -92,7 +92,6 @@ class TestBacktester:
         assert "Max Drawdown" in metrics
         
         # In our scenario, we made $200 on $1000 = 20%
-        # NOTE: This assertion will verify if your src/backtester.py fix is working
         assert metrics['Total Return'] == "20.00%"
 
     @patch('src.evaluation.plt')  # Mock matplotlib

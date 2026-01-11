@@ -30,15 +30,13 @@ class TestAPICollector:
     @patch('src.data_loader.pd.DataFrame.to_csv')
     def test_fetch_success(self, mock_to_csv, mock_yf_download, mock_yf_data):
         """Test happy path: Valid coin, API returns data, file 'saved'."""
-        # 1. Setup the Mock
+        #Setup the Mock
         mock_yf_download.return_value = mock_yf_data
         
-        # 2. Call the function
-        # Ensure we don't hit the cache
+        #Call the function to ensure we don't hit the cache
         with patch('src.data_loader.os.path.exists', return_value=False):
             result_filename = fetch_crypto_data("bitcoin", days=5)
         
-        # 3. Assertions
         assert result_filename == "data/raw/bitcoin_prices.csv"
         mock_yf_download.assert_called_once()
         args, kwargs = mock_yf_download.call_args

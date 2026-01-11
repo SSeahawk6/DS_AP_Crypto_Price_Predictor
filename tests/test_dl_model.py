@@ -14,6 +14,7 @@ except ImportError:
 # Turn off noisy TensorFlow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# Skip tests if TensorFlow is not installed (easier than manually applying the wrapper via TestDLModel = pytest.mark.skipif(not TF_AVAILABLE, reason="...")(TestDLModel))
 @pytest.mark.skipif(not TF_AVAILABLE, reason="TensorFlow not installed")
 class TestDLModel:
     
@@ -28,7 +29,7 @@ class TestDLModel:
             'timestamp': pd.date_range('2023-01-01', periods=n_rows),
             'target': np.random.randint(0, 2, n_rows), # Binary target (0 or 1)
             
-            # Feature columns expected by your model
+            # Feature columns expected by our model
             'sma_20': np.random.rand(n_rows) * 100,
             'bb_upper': np.random.rand(n_rows) * 100,
             'bb_lower': np.random.rand(n_rows) * 100,
@@ -50,21 +51,21 @@ class TestDLModel:
         """
         model, X_test, y_test, predictions = train_dl_model(mock_df)
         
-        # 1. Check Model Architecture
+        # Check Model Architecture for a Neural Network
         assert isinstance(model, tf.keras.Model)
         # We expect 4 layers: Dense(64) -> Dropout -> Dense(32) -> Output(1)
         assert len(model.layers) == 4
         
-        # 2. Check Data Shapes (50 rows * 0.2 split = 10 test rows)
+        # Check Data Shapes (50 rows * 0.2 split = 10 test rows)
         expected_test_size = 10 
         assert len(X_test) == expected_test_size
         assert len(y_test) == expected_test_size
         assert len(predictions) == expected_test_size
         
-        # 3. Check Prediction Validity
-        # Predictions must be integers 0 or 1 (not probabilities like 0.75)
+        # Check Prediction Validity : predictions are binary (0 or 1)
         assert np.all(np.isin(predictions, [0, 1]))
 
+    # Test that the model can handle missing features in the case of the dataset not containing all the features expected by the model
     def test_dl_model_missing_features(self, mock_df):
         """
         Ensures the code is robust:
@@ -75,7 +76,6 @@ class TestDLModel:
         model, X_test, y_test, preds = train_dl_model(incomplete_df)
         
         assert model is not None
-        # Check that the input layer accepted 7 features instead of 8
-        # shape is (None, 7)
+        # Check that the input layer accepted 7 features instead of 8. Shape is (None,7)
         input_shape = model.input_shape
         assert input_shape[1] == 7
