@@ -13,7 +13,7 @@ Here is a list of how the AI tools (Google Gemini, GitHub Copilot, Claude AI) we
 - **Debugging & Problem Solving**:
     - Understanding error messages - **GitHub Copilot**, **Gemini AI**
     - Suggestions and help regarding the caching mechanism and resolving Yahoo Finance API issues for altcoins - **Gemini AI**
-    - Improving the trading strategy via different thresholds for different assets (comparing results and adapting the strategy) - **Gemini AI**
+    - Improving the trading strategy via efficient testing of different thresholds (comparing results in order to adapt the strategy) - **Gemini AI**
     - Improving the backtesting process - **Gemini AI**
     - Help with understanding the libraries needed in the project - **Claude AI**
     - Assistance in plugging the Deep Learning model - **Claude AI**
