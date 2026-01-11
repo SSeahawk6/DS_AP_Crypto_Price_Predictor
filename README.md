@@ -101,10 +101,14 @@ crypto-ml-project/
 ## Usage
 
 ### 1. Installation
-Clones the repo and install dependencies:
+Clone the repo:
 ```bash
-git clone https://github.com/your-username/crypto-price-predictor.git
-cd crypto-price-predictor
+git clone https://github.com/SSeahawk6/crypto_trader_ml.git
+cd crypto_trader_ml
+```
+
+Install dependencies:
+```bash
 # Note: Python 3.9 - 3.11 is recommended.
 # If you are on any later version of Python and installation fails:
 # 1. Open 'requirements.txt' and delete the line 'tensorflow'
@@ -113,13 +117,28 @@ cd crypto-price-predictor
 pip install -r requirements.txt
 ```
 
-### 2. Run the Pipeline
+### 2. Requirements
+If you prefer to install dependencies manually, here is the content of `requirements.txt` to copy-paste:
+```text
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+scikit-learn>=1.3.0
+yfinance==0.2.28
+pytest==7.4.4
+tensorflow>=2.15.0
+pytest-cov>=4.1.0
+curl-cffi==0.7.4
+```
+
+### 3. Run the Pipeline
 Run the full backtest for all coins using the Hybrid Strategy:
 ```bash
 python main.py --coins all --days 1825
 ```
 
-### 3. Verification
+### 4. Verification
 To verify the system integrity, run the test suite:
 ```bash
 pytest
