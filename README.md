@@ -12,7 +12,7 @@ The key innovation of this project is the **Hybrid Threshold Strategy**, which d
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 *   **End-to-End Pipeline with Caching:** Automated data ingestion from Yahoo Finance, featuring **intelligent local caching** (CSVs) to prevent rate limits and speed up experimentation. 
 *   **Hybrid Threshold Logic:** 
@@ -23,7 +23,7 @@ The key innovation of this project is the **Hybrid Threshold Strategy**, which d
 
 ---
 
-## 🎮 Demo
+## Demo
 
 Experience the **Hybrid Threshold Strategy** in action. Run the following command to process all assets:
 
@@ -39,7 +39,7 @@ python main.py --coins all --days 1825
 3.  **Backtest:** The strategy is tested on the final year (Out-of-Sample).
 4.  **Results:** Performance charts are generated in `results/`.
 
-### 🐍 Python API Usage
+### Python API Usage
 
 You can also import the modules directly in a Jupyter Notebook or script:
 
@@ -66,7 +66,7 @@ backtester.run(pd.DataFrame({'price': ..., 'prediction': predictions}))
 
 ---
 
-## 📊 Performance Highlights
+## Performance Highlights
 
 The agent was benchmarked against a naive "Buy & Hold" strategy and a standard "SMA Crossover" rule over a 5-year period (2021-2025).
 
@@ -76,7 +76,7 @@ The backtesting engine generates professional equity curves and risk metrics, pr
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 The repository follows a production-grade structure:
 
@@ -98,13 +98,18 @@ crypto-ml-project/
 
 ---
 
-## 🛠️ Usage
+## Usage
 
 ### 1. Installation
 Clones the repo and install dependencies:
 ```bash
 git clone https://github.com/your-username/crypto-price-predictor.git
 cd crypto-price-predictor
+# Note: Python 3.9 - 3.11 is recommended.
+# If you are on any later version of Python and installation fails:
+# 1. Open 'requirements.txt' and delete the line 'tensorflow'
+# 2. Run 'pip install -r requirements.txt' again
+# The project will run perfectly (skipping only the Deep Learning model).
 pip install -r requirements.txt
 ```
 
@@ -122,6 +127,6 @@ pytest
 
 ---
 
-## ⚖️ Disclaimer
+## Disclaimer
 
 This software is for **educational and research purposes only**. It is not financial advice. Cryptocurrency trading involves significant risk. The author is not responsible for any financial losses.

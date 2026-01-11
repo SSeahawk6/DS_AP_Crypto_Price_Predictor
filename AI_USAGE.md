@@ -16,6 +16,7 @@ Here is a list of how the AI tools (Google Gemini, GitHub Copilot, Claude AI) we
     - Improving the trading strategy via different thresholds for different assets (comparing results and adapting the strategy) - **Gemini AI**
     - Improving the backtesting process - **Gemini AI**
     - Help with understanding the libraries needed in the project - **Claude AI**
+    - Assistance in plugging the Deep Learning model - **Claude AI**
 
 - **Code Architecture & Hygiene**:
     - Help with comments, function names, and docstrings to make code as readable and obvious as possible - **GitHub Copilot** (occasionally autocompleted to save time)

@@ -1,6 +1,9 @@
+venv*/
 __pycache__/
 *.csv
 .coverage
+.dockerignore
 .pytest_cache/
+.DS_Store
 data/raw/
 results/*.png

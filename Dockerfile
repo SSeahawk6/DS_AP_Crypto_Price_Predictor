@@ -15,6 +15,5 @@ RUN pip install --upgrade pip && \
 # Copy the rest of the application
 COPY . .
 
-# Default command: Runs the analysis for Bitcoin (fast check)
-# User can override this (e.g., docker run my-image python main.py --coins all)
-CMD ["python", "main.py", "--coins", "bitcoin"]
+# Default command: Runs the full comparison pipeline for all coins
+CMD ["python", "main.py", "--coins", "all", "--days", "1825"]
