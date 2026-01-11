@@ -144,6 +144,9 @@ def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
     X_test = scaler.transform(X[split:])
     y_train, y_test = y[:split], y[split:]
     
+    # Set seed for reproducibility
+    tf.random.set_seed(42)
+    
     print(f"[INFO] Training Neural Network on {len(X_train)} rows...")
     
     # Architecture: 2 hidden layers with Dropout for regularization
