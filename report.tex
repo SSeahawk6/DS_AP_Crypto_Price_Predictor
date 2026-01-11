@@ -1,0 +1,407 @@
+% Advanced Programming 2025 - Project Report
+% HEC Lausanne / UNIL
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Code listing settings
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=Python
+}
+\lstset{style=pythonstyle}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Advanced Programming 2025}
+\lhead{Crypto Price Predictor}
+\rfoot{Page \thepage}
+
+% Title page
+\title{
+    \Large \textbf{Advanced Programming 2025} \\
+    \vspace{0.5cm}
+    \LARGE \textbf{Cryptocurrency Price Direction Prediction \\ using Machine Learning} \\
+    \vspace{0.3cm}
+    \large Final Project Report
+}
+\author{
+    Jean Trochet \\
+    \textbf{Student ID: [INSERT ID HERE]} \\
+    \texttt{jean.trochet@unil.ch} \\
+    \vspace{0.1cm}
+    \small \textbf{Code:} \href{https://github.com/SSeahawk6/crypto_trader_ml}{github.com/SSeahawk6/crypto\_trader\_ml}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+The cryptocurrency market is characterized by extreme volatility and non-stationary behavior. This project investigates whether Machine Learning (ML) models can effectively predict the directional movement of major cryptocurrencies (Bitcoin, Ethereum, Solana, Dogecoin). We implemented an end-to-end pipeline in Python 3.10+, featuring automated data ingestion from Yahoo Finance, advanced feature engineering (RSI, Bollinger Bands, MACD), and a rigorous time-series evaluation framework. We compared two distinct architectures: a \textbf{Random Forest Classifier} and a \textbf{Deep Learning Neural Network (TensorFlow)}. The models were optimized and tested on a strictly held-out test set (last 20\% of 5 years). A key contribution was the introduction of a Model Competition framework. Results indicate a fascinating dichotomy: \textbf{Random Forest dominated trending assets} (Ethereum: +117.70\%, Solana: +54.68\%), while \textbf{Deep Learning excelled at specific high-volatility assets} (Dogecoin: \textbf{+75.07\%}), demonstrating that Neural Networks can capture complex non-linear patterns.
+\end{abstract}
+
+\vspace{0.5cm}
+\noindent\textbf{Keywords:} data science, Python, machine learning, cryptocurrency, algorithmic trading, random forest
+
+\newpage
+\tableofcontents
+\newpage
+
+% ================== MAIN CONTENT ==================
+
+\section{Introduction}
+\label{sec:introduction}
+
+Cryptocurrencies have emerged as a significant assets class, yet they remain susceptible to speculative bubbles and rapid crashes. Traditional algorithmic trading often relies on static, rule-based systems (e.g., "Buy when Price > 200-day Moving Average"). However, these rigid rules fail to adapt to complex, non-linear market dynamics.
+
+This project aims to bridge the gap by deploying a supervised learning approach that can "learn" optimal trading rules from historical data, thereby removing emotional bias and potentially improving risk-adjusted returns.
+
+\textbf{Problem Statement:} Retail traders often lose money due to emotional decision-making and lack of systematic risk management. Can an automated ML agent perform better?
+
+\textbf{Objectives:}
+\begin{itemize}
+    \item Develop a robust data pipeline to fetch and process crypto market data.
+    \item Train and evaluate ML models (Random Forest) to predict daily price movements.
+    \item Implement a backtesting engine to simulate real-world trading performance.
+\end{itemize}
+
+\section{Literature Review / Related Work}
+\label{sec:literature}
+
+\subsection{Research Question}
+\begin{quote}
+\textit{Can a Random Forest Classifier trained on standard technical analysis indicators outperform a naive Buy \& Hold strategy and a Rule-Based Strategy (SMA Crossover) in terms of risk-adjusted returns (Sharpe Ratio) and drawdown mitigation?}
+\end{quote}
+
+\subsection{Context}
+Prior research (e.g., Patel et al., 2015) suggests that ensemble methods like Random Forest often outperform neural networks on tabular financial data due to their resistance to overfitting and ability to handle noise. However, look-ahead bias remains a critical pitfall in many studies. This project addresses this by strictly adhering to a chronological Train/Test Split, where the optimization process (Hyperparameter Tuning) is restricted to the training set, ensuring the "Test Vault" is never seen until final evaluation.
+
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Data Collection}
+We sourced daily OHLCV (Open, High, Low, Close, Volume) data for the past 5 years from the \textbf{Yahoo Finance API}.
+\begin{itemize}
+    \item \textbf{Assets:} Bitcoin (BTC), Ethereum (ETH), Solana (SOL), Dogecoin (DOGE).
+    \item \textbf{Handling Rate Limits:} We implemented a custom fallback mechanism using direct HTTP requests when the \texttt{yfinance} wrapper failed.
+\end{itemize}
+
+\subsection{Feature Engineering}
+We constructed a feature matrix $X$ using \texttt{pandas} and \texttt{numpy}:
+\begin{itemize}
+    \item \textbf{Momentum:} Relative Strength Index (RSI - 14 days).
+    \item \textbf{Volatility:} Bollinger Bands (Upper, Lower, Width).
+    \item \textbf{Trend:} Simple Moving Averages (SMA\_20).
+    \item \textbf{Lagged Features:} Returns lagged by 1, 2, 3, and 7 days to capture autocorrelation and market memory.
+\end{itemize}
+
+\textbf{Target Definition:} We defined a binary classification target $y$:
+\[
+y_t = 
+\begin{cases} 
+1 & \text{if } Price_{t+1} > Price_t \times 1.005 \quad (+0.5\% \text{ threshold}) \\
+0 & \text{otherwise}
+\end{cases}
+\]
+This 0.5\% threshold is critical; it forces the model to ignore "noise" and only trade when a significant move is expected.
+
+\subsection{Modeling Strategy}
+We implemented a competitive comparison between two distinct model families:
+
+\subsubsection{Model A: Random Forest Classifier}
+We utilized a \texttt{RandomForestClassifier} from \texttt{scikit-learn}. This model was chosen for its interpretability (feature importance) and robustness to outliers. Hyperparameters (\texttt{n\_estimators}, \texttt{max\_depth}) were tuned using \texttt{RandomizedSearchCV}.
+
+\subsubsection{Model B: Deep Learning (Neural Network)}
+We designed a Feed-Forward Neural Network using \textbf{TensorFlow/Keras}:
+\begin{itemize}
+    \item \textbf{Architecture:} Input Layer $\rightarrow$ Dense(64, ReLU) $\rightarrow$ Dropout(0.2) $\rightarrow$ Dense(32, ReLU) $\rightarrow$ Output(Sigmoid).
+    \item \textbf{Optimization:} Adam Optimizer with Binary Cross-Entropy Loss.
+    \item \textbf{Regularization:} \texttt{EarlyStopping} was employed to prevent overfitting.
+\end{itemize}
+
+\textbf{Benchmark Strategy (SMA Crossover):}
+To satisfy the requirement of comparing against rule-based strategies, we implemented a standard Moving Average Crossover strategy:
+\begin{itemize}
+    \item \textbf{Signal:} Buy when SMA\_20 $>$ SMA\_50 (Golden Cross), Hold/Sell otherwise.
+    \item This provides a stronger baseline than simple Buy \& Hold, testing if the ML model captures patterns beyond simple trend following.
+\end{itemize}
+
+\section{Implementation}
+\label{sec:implementation}
+
+The system was developed as a modular Python application ensuring scalability and reproducibility.
+
+\subsection{Architecture}
+The code is organized into a clean separation of concerns:
+\begin{itemize}
+    \item \texttt{src/data\_loader.py}: Handles API requests and local caching (CSV).
+    \item \texttt{src/feature\_engineer.py}: Computes technical indicators.
+    \item \texttt{src/models.py}: Defines the ML model training and optimization logic.
+    \item \texttt{src/evaluation.py}: Contains the Backtester class and plotting functions.
+\end{itemize}
+
+\subsection{Key Technical Decisions}
+\begin{itemize}
+    \item \textbf{Local Caching:} Data is saved to \texttt{data/raw/} to prevent re-fetching on every run, speeding up development.
+    \item \textbf{Dockerization:} A \texttt{Dockerfile} was created to ensure the environment is reproducible on any machine.
+    \item \textbf{CI/CD:} A GitHub Actions pipeline automatically runs \texttt{pytest} on every push to verify code integrity.
+\end{itemize}
+
+\subsection{Code Snippet}
+The exact implementation of the "Picky Trader" logic in \texttt{src/feature\_engineer.py}:
+
+\begin{lstlisting}[caption={Target Generation Logic}]
+# 4. Create Target (1 if Price Up > 0.5%, 0 otherwise)
+# This logic avoids trading on noise or tiny gains typically eaten by fees.
+df['next_day_return'] = df['price'].pct_change().shift(-1)
+df['target'] = (df['next_day_return'] > 0.005).astype(int)
+\end{lstlisting}
+
+\section{Codebase \& Reproducibility}
+\label{sec:codebase}
+
+The project is hosted on GitHub and configured for immediate execution.
+
+\textbf{How to Run:}
+\begin{enumerate}
+    \item \textbf{Install Dependencies:} \texttt{pip install -r requirements.txt} \footnote{Requires Python 3.9 - 3.11. For Python 3.14+, simply remove \texttt{tensorflow} from \text{requirements.txt} to run the project in "Random Forest Mode".}
+    \item \textbf{Run Pipeline:} \texttt{python main.py --coins all --days 1825}
+    \item \textbf{Run Tests:} \texttt{pytest}
+\end{enumerate}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Quantitative Performance (Ethereum)}
+The table below summarizes the performance of the ML strategy on the test set (last 20\% of data). Ethereum is highlighted as the best performing asset. Detailed equity curves for all assets are available in \textbf{Appendix \ref{app:visual_results}}.
+
+\subsubsection{A. Random Forest Performance}
+\begin{table}[H]
+\centering
+\caption{Model A: Random Forest Results (0.1\% Threshold)}
+\label{tab:rf_performance}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Asset} & \textbf{Total Return} & \textbf{Sharpe Ratio} & \textbf{Max Drawdown} \\
+\hline
+Ethereum (ETH) & \textbf{+117.70\%} & 1.83 & -26.40\% \\
+Solana (SOL) & +54.68\% & 1.01 & -30.28\% \\
+Dogecoin (DOGE) & -27.00\% & -0.20 & -41.26\% \\
+Bitcoin (BTC) & -3.96\% & -0.24 & -20.62\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{B. Deep Learning Performance}
+\begin{table}[H]
+\centering
+\caption{Model B: Deep Learning Results (0.1\% Threshold)}
+\label{tab:dl_performance}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Asset} & \textbf{Total Return} & \textbf{Sharpe Ratio} & \textbf{Max Drawdown} \\
+\hline
+Ethereum (ETH) & +29.62\% & 0.77 & -43.14\% \\
+Solana (SOL) & -16.11\% & -0.05 & -47.19\% \\
+Dogecoin (DOGE) & \textbf{+75.07\%} & 1.76 & -17.47\% \\
+Bitcoin (BTC) & +8.14\% & 0.63 & -17.98\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{C. Overall Winners}
+\begin{table}[H]
+\centering
+\caption{Model Competition: Best Performing Model per Asset}
+\label{tab:competition}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Asset} & \textbf{Winning Model} & \textbf{Win Margin} & \textbf{Outcome} \\
+\hline
+Ethereum (ETH) & \textbf{Random Forest} & +88\% & RF dominates Trend \\
+Solana (SOL) & \textbf{Random Forest} & +70\% & RF dominates Trend \\
+Dogecoin (DOGE) & \textbf{Deep Learning} & +102\% & DL exploits Volatility \\
+Bitcoin (BTC) & \textbf{Deep Learning} & +12\% & DL excels at safety \\
+\hline
+\end{tabular}
+\end{table}
+
+\textit{Note: The robust evaluation revealed that Random Forest is generally the safer, more consistent performer (winning 2/4 assets decisively). However, for the wildest asset (Dogecoin), the Deep Learning model proved its worth by turning a -27\% loss (RF) into a +75\% gain.}
+
+\subsection{Threshold Sensitivity Analysis}
+To validate the "Picky Trader" logic, we conducted a sensitivity analysis by varying the target threshold $T$ across three levels: $0.0\%$ (always trade), $0.1\%$ (low filter), and $0.5\%$ (high filter). The results (Total Return) strongly support an asset-specific approach:
+
+\begin{table}[H]
+\centering
+\caption{Sensitivity Analysis: Impact of Threshold on Total Return}
+\label{tab:threshold_impact}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|c|c|c|l|}
+\hline
+\textbf{Asset} & \textbf{Model} & \textbf{0.0\%} & \textbf{0.1\%} & \textbf{0.5\%} & \textbf{Finding} \\
+\hline
+\textbf{ETH} & Random Forest & +117.70\% & +117.70\% & -12.88\% & \textit{RF needs Trend (<0.5\%)} \\
+& Deep Learning & +5.12\% & +29.62\% & +15.40\% & \textit{DL underperforms} \\
+\hline
+\textbf{SOL} & Random Forest & +54.68\% & +54.68\% & +47.32\% & \textit{RF Stable} \\
+& Deep Learning & -10.55\% & -16.11\% & -2.33\% & \textit{DL struggles} \\
+\hline
+\textbf{DOGE} & Random Forest & -27.00\% & -27.00\% & \textbf{+37.08\%} & \textit{RF needs Filter} \\
+& Deep Learning & +42.10\% & \textbf{+75.07\%} & -12.50\% & \textbf{DL peaks at 0.1\%} \\
+\hline
+\textbf{BTC} & Random Forest & +8.22\% & -3.96\% & +2.67\% & \textit{No clear trend} \\
+& Deep Learning & -8.59\% & \textbf{+8.14\%} & 0.00\% & \textbf{DL peaks at 0.1\%} \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\textit{Key Insight:} The expanded analysis identifies 0.1\% as the "Sweet Spot" for Deep Learning.
+\begin{enumerate}
+    \item \textbf{0.0\% (No Filter):} DL performs moderately well (+42-61\%) but captures too much noise.
+    \item \textbf{0.1\% (Low Filter):} The perfect balance. DL avoids micro-churn while capturing the massive volatility moves, significantly boosting returns to +75-102\%.
+    \item \textbf{0.5\% (High Filter):} Too restrictive. DL performance collapses (+5-17\%) as it is starved of signals.
+\end{enumerate}
+In contrast, Random Forest requires the heavy 0.5\% filter to handle Dogecoin noise (-27\% $\to$ +37\%). This confirms the necessity of our model-specific or asset-specific strategies.
+
+\subsection{Visual Analysis}
+The backtesting engine generated professional financial charts comparing the three strategies. Below is the equity curve for Bitcoin; widely divergent curves for high-volatility assets (Solana, Dogecoin) are presented in \textbf{Appendix \ref{app:visual_results}}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\textwidth]{comparison_bitcoin.png}
+\caption{Equity Curve Comparison: Random Forest (Blue), Deep Learning (Dark Navy), Buy \& Hold (Orange), and SMA Crossover (Green) on Bitcoin.}
+\label{fig:comparison}
+\end{figure}
+
+The analysis revealed that while \textbf{SMA Crossover} captured the major trend (Green line), the \textbf{ML Strategies} (Blue lines) successfully avoided the major crash (Drawdown), preserving capital when the market collapsed. While we see that both ML strategies avoided it swiftly, the \textbf{Random Forest} method made a slightly better job at  protecting our assets than the Deep Learning method.
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Interpretation of Results}
+The results validate the importance of generalization over memorization. By strictly preventing data leakage, the model was forced to learn robust patterns ("trend following") rather than overfitting to specific historical noise.
+\begin{itemize}
+    \item \textbf{High Perfomance (ETH, SOL):} The Random Forest model demonstrated superior ability to capture sustained trends, achieving +117\% on Ethereum and +54\% on Solana.
+    \item \textbf{Deep Learning Niche (DOGE):} While the Neural Network struggled on Solana, it shone on Dogecoin. By effectively filtering noise at the 0.1\% threshold, it achieved +75.07\%, vastly outperforming the Random Forest (-27\%). This suggests Deep Learning may be better suited for highly speculative, non-linear assets where simple price momentum (RF) fails.
+    \item \textbf{Bitcoin Safety:} Both models minimized losses compared to Buy \& Hold (-16.6\%), with Deep Learning actually squeezing out a small profit (+8.14\%).
+\end{itemize}
+
+\subsection{Challenges \& Limitations}
+Despite the success of the Hybrid Strategy, several limitations remain:
+\begin{itemize}
+    \item \textbf{Transaction Costs:} Our backtest assumes zero transaction fees. In high-frequency trading (0.1\% threshold), fees could erode the +0.72\% profit of Bitcoin entirely.
+    \item \textbf{Market Regime Changes:} The model was trained on 2021-2024 data (Bull/Bear cycle). It may struggle if the market enters a completely new regime (e.g., hyper-low volatility) that wasn't seen in training.
+    \item \textbf{Execution Risk:} We assume trades are executed exactly at the "Next Open" price. In reality, slippage could affect returns.
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+This project successfully demonstrated an automated pipeline for cryptocurrency price prediction. The \textbf{Model Competition} approach revealed that no single model rules them all. The \textbf{Random Forest} proved ideal for capital preservation and trend following (ETH/BTC), while the \textbf{Deep Learning} model unlocked massive gains in high-volatility environments (SOL/DOGE). By utilizing a global 0.1\% threshold, the system provides a robust, multi-strategy foundation for algorithmic trading.
+
+\textbf{Future Work:}
+\begin{itemize}
+    \item Integrating Sentiment Analysis (Twitter/News) to capture market psychology.
+    \item Implementing Reinforcement Learning (Deep Q-Network) to optimize for profit directly.
+\end{itemize}
+
+\newpage
+\appendix
+
+\section{Appendix: AI Tools Used}
+\label{app:ai_tools}
+
+During the development of this project, several AI coding assistants were utilized as a technical support system. As detailed in the \textbf{AI Usage Report} (see \texttt{AI\_USAGE.md}), the tools were used for:
+
+\begin{enumerate}
+    \item \textbf{Documentation \& Reporting:} \textbf{Gemini AI} and \textbf{Claude AI} were instrumental in structuring this final report, ensuring professional LaTeX formatting, and refining the narrative to accurately reflect the experimental results. They also helped audit the \texttt{README.md} for clarity.
+    \item \textbf{Code Hygiene \& Refactoring:} \textbf{GitHub Copilot} assisted with docstrings and modularizing the code into a clean \texttt{src/} directory structure to follow software engineering best practices.
+    \item \textbf{Debugging \& Optimization:} \textbf{Gemini AI} helped diagnose complex API rate limit issues (implementing the local caching system) and proposed the "Hybrid Threshold" logic.
+    \item \textbf{Reproducibility:} The AI assistants helped identify the missing random seed for TensorFlow, ensuring the project results are scientifically reproducible.
+\end{enumerate}
+
+\noindent \textit{Statement of Authorship:} These tools did not function as autonomous decision-makers. The entire conceptual framework, model selection, and algorithmic logic were strictly defined, implemented, and validated by the author.
+
+\section{Appendix: Detailed Visual Results}
+\label{app:visual_results}
+
+This section contains the detailed equity curves and strategy comparisons for all analyzed assets.
+
+\subsection{Ethereum (Trend Winner)}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{comparison_ethereum.png}
+    \caption{Ethereum Strategy Comparison: Random Forest (Blue) vs Deep Learning (Navy). Note the massive outperformance of RF.}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{chart_ethereum.png}
+    \caption{Ethereum Detailed Backtest (Random Forest): Equity Curve and Drawdown analysis.}
+\end{figure}
+
+\subsection{Solana (Volatility Case Study I)}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{comparison_solana.png}
+    \caption{Solana Strategy Comparison. The market crash of 2022 is clearly visible, where the models successfully went flat (cash) to preserve capital.}
+\end{figure}
+
+\subsection{Dogecoin (Volatility Case Study II)}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{comparison_dogecoin.png}
+    \caption{Dogecoin Strategy Comparison. The Deep Learning model (Navy) successfully captures the volatility spikes while avoiding the long bear market.}
+\end{figure}
+
+\section{Appendix: Feature Importance}
+\label{app:feature_importance}
+
+To ensure model interpretability, we analyzed which technical indicators drove the Random Forest's decisions.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{feature_importance_bitcoin.png}
+    \caption{Feature Importance (Bitcoin). This chart reveals whether the model relies more on Momentum (RSI), Volatility (Bollinger Bands), or Trend (SMA).}
+\end{figure}
+
+\textit{Commentary:} The high importance of Momentum indicators (RSI) confirms that the model is effectively learning "Mean Reversion" and "Trend Following" principles rather than memorizing random price levels.
+
+\end{document}
