@@ -19,16 +19,15 @@ except ImportError:
     print("[WARN] TensorFlow not found. Deep Learning model will be skipped.")
     TF_AVAILABLE = False
 
-# -------------------------
 # Random Forest Model
-# -------------------------
+
 
 def train_rf_model(df: pd.DataFrame) -> Tuple[Any, pd.DataFrame, pd.Series, np.ndarray]:
     """
-    Trains a Random Forest model using GridSearchCV.
-    Now includes Lag Features (Memory) and new Target Threshold.
+    Trains a Random Forest model using RandomizedSearchCV.
+    Includes technical indicators and lag features.
     """
-    # 1. Define Features (UPDATED LIST)
+    # Feature selection
     features = [
         'sma_20', 'bb_upper', 'bb_lower', 'rsi', 
         'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_7'
@@ -44,9 +43,10 @@ def train_rf_model(df: pd.DataFrame) -> Tuple[Any, pd.DataFrame, pd.Series, np.n
     X = df[available_features]
     y = df['target']
     
-    # 2. Time-Based Split (80/20)
-    # We use a simple time-based split instead of random shuffling because financial data 
-    # is sequential. Random splitting would introduce "look-ahead bias" (training on future data).
+    X = df[available_features]
+    y = df['target']
+    
+    # Time-based split (80/20) to prevent look-ahead bias
     split_point = int(len(df) * 0.8)
     
     X_train = X.iloc[:split_point]
@@ -57,7 +57,7 @@ def train_rf_model(df: pd.DataFrame) -> Tuple[Any, pd.DataFrame, pd.Series, np.n
     
     print(f"[INFO] Training on {len(X_train)} rows with {len(available_features)} features...")
     
-    # 3. Hyperparameter Tuning
+    # Search space for RandomizedSearchCV
     param_grid = {
         'n_estimators': [50, 100, 200],
         'max_depth': [None, 10, 20],
@@ -71,7 +71,7 @@ def train_rf_model(df: pd.DataFrame) -> Tuple[Any, pd.DataFrame, pd.Series, np.n
     best_model = grid_search.best_estimator_
     print(f"[INFO] Best Parameters found: {grid_search.best_params_}")
     
-    # 4. Evaluate
+    # Evaluate
     predictions = best_model.predict(X_test)
     accuracy = accuracy_score(y_test, predictions)
     print(f"[RESULT] Model Accuracy on Test Set: {accuracy:.2%}")
@@ -113,9 +113,7 @@ class ModelOptimizer:
         return search.best_estimator_
 
 
-# -------------------------
 # Deep Learning Model
-# -------------------------
 
 def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
     """
@@ -124,26 +122,23 @@ def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
     """
     if not TF_AVAILABLE:
         print("[INFO] Skipping Deep Learning training (TensorFlow missing).")
-        # Return dummy values to prevent unpacking errors in main.py
         # Expected: model, X_test, y_test, predictions
         return None, None, None, []
-    # 1. Define Features (Must match what we created in feature_engineer.py)
+    # Define Features (Must match what we created in feature_engineer.py)
     features = [
         'sma_20', 'bb_upper', 'bb_lower', 'rsi', 
         'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_7'
     ]
     
-    # Filter to ensure features exist
     available_features = [f for f in features if f in df.columns]
     X = df[available_features].values
     y = df['target'].values
     
-    # 2. Scale the Data (CRITICAL for Neural Networks)
-    # Neural Nets fail if inputs are not between 0 and 1 (or -1 and 1) because large values
-    # cause gradients to explode or vanish, stopping the learning process.
+
+    # Scale data (standardization is critical for NN convergence)
     scaler = StandardScaler()
     
-    # Time-based split
+    # Time-based split: 80% Train, 20% Test
     split = int(len(X) * 0.8)
     X_train = scaler.fit_transform(X[:split])
     X_test = scaler.transform(X[split:])
@@ -151,23 +146,12 @@ def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
     
     print(f"[INFO] Training Neural Network on {len(X_train)} rows...")
     
-    # 3. Build the Neural Network (Lecture 10 architecture)
+    # Architecture: 2 hidden layers with Dropout for regularization
     model = Sequential([
-        # Explicit Input Layer (Best Practice)
         Input(shape=(X_train.shape[1],)),
-        
-        # Layer 1: 64 Neurons, ReLU activation
-        # ReLU is preferred over Sigmoid for hidden layers to avoid the vanishing gradient problem.
         Dense(64, activation='relu'),
-        
-        # Dropout: Randomly turn off 20% of neurons to prevent overfitting
-        # This acts as a regularization technique, forcing the network to learn robust features.
         Dropout(0.2),
-        
-        # Layer 2: 32 Neurons
         Dense(32, activation='relu'),
-        
-        # Output Layer: 1 Neuron (Probability between 0 and 1)
         Dense(1, activation='sigmoid')
     ])
     
@@ -175,8 +159,7 @@ def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
                   loss='binary_crossentropy', 
                   metrics=['accuracy'])
     
-    # 4. Train with Early Stopping
-    # We use 20% of X_train as a validation set to monitor overfitting.
+    # Train with Early Stopping
     early_stop = EarlyStopping(
         monitor='val_loss', 
         patience=5, 
@@ -188,13 +171,12 @@ def train_dl_model(df: pd.DataFrame) -> Tuple[Any, Any, Any, Any]:
         X_train, y_train, 
         epochs=50, 
         batch_size=16, 
-        validation_split=0.2, # Create internal validation set
+        validation_split=0.2,
         callbacks=[early_stop],
         verbose=0
     )
     
-    # 5. Predict
-    # The NN outputs probabilities (e.g., 0.75). We convert to 0 or 1.
+    # Predict probabilities (0-1) and threshold at 0.5
     probs = model.predict(X_test, verbose=0)
     predictions = (probs > 0.5).astype(int).flatten()
     
